@@ -1,0 +1,616 @@
+/* =====================================================================
+   WolfFlix — 70 · Sagas & Cycles
+   Habille ce que pose js/wolfflix-sagas.js : rangées de l'accueil,
+   pages Sagas / Cycles, ordre de visionnage, éditeur d'ordre.
+   Sans le module JS, ce fichier n'a aucun effet.
+   ===================================================================== */
+
+/* ---------- Rangées défilantes ---------- */
+.wf-rangee {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-top: 10px;
+    padding-bottom: 14px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+
+.wf-rangee > .card {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+}
+
+.wf-section .wf-titre-lien {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.wf-section .wf-titre-lien .material-icons {
+    color: var(--wf-sang-vif, #C73441);
+    font-size: 1em;
+    transition: transform var(--wf-rapide, 160ms);
+}
+
+.wf-section .wf-titre-lien:hover .material-icons {
+    transform: translateX(4px);
+}
+
+/* Collections sans affiche */
+.wf-sans-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12%;
+    text-align: center;
+    background: radial-gradient(circle at 50% 35%, #26262D, #111114 70%);
+    border: 1px solid rgba(167, 176, 186, 0.25);
+}
+
+.wf-sans-image-nom {
+    font-family: var(--wf-titre, serif);
+    color: var(--wf-acier-clair, #D5DBE1);
+    font-size: 1.05em;
+    line-height: 1.2;
+}
+
+/* Numéro d'ordre gravé */
+.wf-rang {
+    position: absolute;
+    left: 6px;
+    bottom: 4px;
+    z-index: 3;
+    font-family: var(--wf-titre, serif);
+    font-size: 2.4em;
+    line-height: 1;
+    color: #F3EFEA;
+    -webkit-text-stroke: 1px rgba(10, 10, 12, 0.8);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9), 0 0 2px #000;
+    pointer-events: none;
+}
+
+/* Ruban « À suivre » */
+.wf-ruban {
+    position: absolute;
+    top: 10px;
+    right: -4px;
+    z-index: 3;
+    padding: 3px 10px 3px 12px;
+    font-family: var(--wf-titre, serif);
+    font-size: 0.82em;
+    letter-spacing: 0.04em;
+    color: #F7F1EC;
+    background: linear-gradient(90deg, #7A1820, #C73441);
+    clip-path: polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 50%);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+}
+
+.wf-prochain .cardScalable {
+    box-shadow: 0 0 0 1px rgba(199, 52, 65, 0.7), 0 0 18px rgba(199, 52, 65, 0.25);
+}
+
+/* ---------- Fiche d'une collection ---------- */
+.wf-surtitre {
+    font-family: var(--wf-titre, serif);
+    color: var(--wf-sang-vif, #C73441);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-size: 0.95rem;
+    margin-bottom: 0.2em;
+}
+
+.wf-ordre-entete {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1em;
+    flex-wrap: wrap;
+}
+
+.wf-pastille {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0.5em;
+    padding: 1px 8px;
+    border: 1px solid rgba(199, 52, 65, 0.6);
+    border-radius: 999px;
+    font-family: var(--wf-texte-police, serif);
+    font-size: 0.55em;
+    letter-spacing: 0.06em;
+    color: var(--wf-acier-clair, #D5DBE1);
+}
+
+/* La rangée ordonnée remplace les rangées « Films / Séries » de Jellyfin */
+.wf-collection-ordonnee .collectionItems {
+    display: none !important;
+}
+
+/* ---------- Boutons ---------- */
+.wf-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.55em 1.1em;
+    border-radius: 3px;
+    font-family: var(--wf-titre, serif);
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background var(--wf-rapide, 160ms), border-color var(--wf-rapide, 160ms), transform var(--wf-rapide, 160ms);
+}
+
+.wf-btn .material-icons {
+    font-size: 1.15em;
+}
+
+.wf-btn:active {
+    transform: scale(0.97);
+}
+
+.wf-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.wf-btn-pri {
+    color: #FFF;
+    background: linear-gradient(180deg, #B92B36, #8A1D26);
+    border: 1px solid #C73441;
+}
+
+.wf-btn-pri:hover:not(:disabled) {
+    background: linear-gradient(180deg, #C73441, #A3232E);
+}
+
+.wf-btn-sec {
+    color: var(--wf-acier-clair, #D5DBE1);
+    background: rgba(20, 20, 24, 0.85);
+    border: 1px solid rgba(167, 176, 186, 0.4);
+}
+
+.wf-btn-sec:hover:not(:disabled) {
+    border-color: #C73441;
+    color: #FFF;
+}
+
+/* ---------- Champs ---------- */
+.wf-champ {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0 0.7em;
+    min-height: 2.5em;
+    background: #111114;
+    border: 1px solid rgba(167, 176, 186, 0.3);
+    border-radius: 3px;
+    transition: border-color var(--wf-rapide, 160ms);
+}
+
+.wf-champ:focus-within {
+    border-color: #C73441;
+}
+
+.wf-champ .material-icons {
+    color: var(--wf-acier, #A7B0BA);
+    font-size: 1.2em;
+}
+
+.wf-champ input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    color: var(--wf-texte, #E9E6E1);
+    font: inherit;
+}
+
+.wf-tri {
+    min-height: 2.5em;
+    padding: 0 0.7em;
+    background: #111114;
+    color: var(--wf-texte, #E9E6E1);
+    border: 1px solid rgba(167, 176, 186, 0.3);
+    border-radius: 3px;
+    font: inherit;
+}
+
+/* ---------- Pages « Sagas » et « Cycles » ---------- */
+#wf-page {
+    position: fixed;
+    top: var(--wf-haut, 64px);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    overflow-y: auto;
+    background:
+        radial-gradient(ellipse at 50% -10%, rgba(163, 35, 46, 0.16), transparent 55%),
+        var(--wf-noir, #0A0A0C);
+    animation: wf-page-entree var(--wf-normal, 320ms) var(--wf-courbe, ease) both;
+}
+
+html.wf-page-ouverte body {
+    overflow: hidden;
+}
+
+@keyframes wf-page-entree {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.wf-page-entete {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5em;
+    flex-wrap: wrap;
+    padding-top: 1.6em;
+    padding-bottom: 1em;
+    border-bottom: 1px solid rgba(167, 176, 186, 0.15);
+}
+
+.wf-page-surtitre {
+    margin: 0;
+    font-family: var(--wf-titre, serif);
+    font-size: 0.85rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-page-titre {
+    margin: 0.1em 0 0;
+    font-family: var(--wf-titre, serif);
+    font-weight: 400;
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    line-height: 1;
+}
+
+.wf-page-compte {
+    margin: 0.35em 0 0;
+    color: var(--wf-acier, #A7B0BA);
+    font-style: italic;
+}
+
+.wf-page-outils {
+    display: flex;
+    gap: 0.6em;
+    flex-wrap: wrap;
+}
+
+.wf-page-outils .wf-champ {
+    width: min(320px, 70vw);
+}
+
+.wf-page-grille {
+    display: flex;
+    flex-wrap: wrap;
+    padding-top: 1.2em;
+    padding-bottom: 3em;
+}
+
+.wf-page-grille > .card {
+    flex: 0 0 auto;
+}
+
+.wf-vide {
+    color: var(--wf-acier, #A7B0BA);
+    font-style: italic;
+    padding: 2em 0;
+}
+
+/* ---------- Attente (petit loup qui court) ---------- */
+.wf-attente {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6em;
+    width: 100%;
+    padding: 2.5em 0;
+    color: var(--wf-acier, #A7B0BA);
+    font-family: var(--wf-titre, serif);
+    letter-spacing: 0.1em;
+}
+
+.wf-attente-loup {
+    width: 100px;
+    height: 48px;
+    background: url("../assets/img/loup-course.webp") 0 0 / 400px 48px no-repeat;
+    animation: wf-attente-course 0.48s steps(4) infinite;
+}
+
+@keyframes wf-attente-course {
+    to {
+        background-position: -400px 0;
+    }
+}
+
+/* ---------- Éditeur d'ordre ---------- */
+html.wf-modale-ouverte body {
+    overflow: hidden;
+}
+
+.wf-editeur-fond {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2vh 2vw;
+    background: rgba(5, 5, 7, 0.78);
+    backdrop-filter: blur(3px);
+    animation: wf-fondu var(--wf-rapide, 160ms) ease both;
+}
+
+@keyframes wf-fondu {
+    from {
+        opacity: 0;
+    }
+}
+
+.wf-editeur {
+    display: flex;
+    flex-direction: column;
+    width: min(640px, 100%);
+    max-height: 92vh;
+    background: linear-gradient(180deg, #17171C, #0F0F12);
+    border: 1px solid rgba(167, 176, 186, 0.28);
+    border-top: 2px solid #A3232E;
+    border-radius: 4px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+    animation: wf-page-entree var(--wf-normal, 320ms) var(--wf-courbe, ease) both;
+}
+
+.wf-editeur header {
+    padding: 1.1em 1.3em 0.6em;
+}
+
+.wf-editeur h2 {
+    margin: 0.1em 0 0;
+    font-family: var(--wf-titre, serif);
+    font-weight: 400;
+    font-size: 1.7rem;
+}
+
+.wf-aide {
+    margin: 0.3em 0 0;
+    color: var(--wf-acier, #A7B0BA);
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+.wf-editeur-liste {
+    list-style: none;
+    margin: 0;
+    padding: 0.3em 0.8em;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 120px;
+}
+
+.wf-editeur-liste li {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    padding: 0.35em 0.4em;
+    margin: 0.25em 0;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(167, 176, 186, 0.12);
+    border-radius: 3px;
+    transition: background var(--wf-rapide, 160ms), box-shadow var(--wf-rapide, 160ms);
+}
+
+.wf-editeur-liste li.wf-tire {
+    background: rgba(163, 35, 46, 0.22);
+    border-color: #C73441;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+    position: relative;
+    z-index: 2;
+}
+
+.wf-editeur-liste li.wf-nouveau {
+    animation: wf-nouveau 1.2s ease;
+}
+
+@keyframes wf-nouveau {
+    from {
+        background: rgba(199, 52, 65, 0.4);
+    }
+}
+
+.wf-poignee {
+    color: var(--wf-acier, #A7B0BA);
+    cursor: grab !important;
+    touch-action: none;
+    padding: 0.2em;
+}
+
+.wf-tire .wf-poignee {
+    cursor: grabbing !important;
+}
+
+.wf-num {
+    min-width: 1.6em;
+    text-align: right;
+    font-family: var(--wf-titre, serif);
+    font-size: 1.25em;
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-vignette {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 50px;
+    border-radius: 2px;
+    background: #1D1D23 center / cover no-repeat;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.wf-nom {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wf-nom small {
+    color: var(--wf-acier, #A7B0BA);
+    margin-left: 0.3em;
+}
+
+.wf-nom .wf-type {
+    display: inline-block;
+    margin-left: 0.6em;
+    padding: 0 6px;
+    border: 1px solid rgba(167, 176, 186, 0.3);
+    border-radius: 999px;
+    font-size: 0.75em;
+}
+
+.wf-icone {
+    display: inline-flex;
+    padding: 0.25em;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    color: var(--wf-acier, #A7B0BA);
+    transition: color var(--wf-rapide, 160ms), background var(--wf-rapide, 160ms);
+}
+
+.wf-icone:hover {
+    color: #FFF;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.wf-icone-retirer:hover {
+    color: #FFF;
+    background: rgba(199, 52, 65, 0.5);
+}
+
+.wf-editeur-ajout {
+    padding: 0.6em 1.3em;
+    border-top: 1px solid rgba(167, 176, 186, 0.12);
+}
+
+.wf-editeur-resultats {
+    max-height: 30vh;
+    overflow-y: auto;
+}
+
+.wf-resultat {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    width: 100%;
+    margin-top: 0.3em;
+    padding: 0.3em 0.4em;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+}
+
+.wf-resultat:hover:not(:disabled) {
+    border-color: rgba(199, 52, 65, 0.6);
+    background: rgba(163, 35, 46, 0.12);
+}
+
+.wf-resultat .add_circle {
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-resultat:disabled {
+    opacity: 0.4;
+}
+
+.wf-editeur footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.6em;
+    padding: 0.8em 1.3em 1.1em;
+    border-top: 1px solid rgba(167, 176, 186, 0.12);
+}
+
+.wf-editeur-etat {
+    margin-right: auto;
+    color: var(--wf-acier, #A7B0BA);
+    font-style: italic;
+}
+
+/* Sur téléphone : flèches masquées, la poignée suffit */
+@media (max-width: 600px) {
+    .wf-editeur-liste [data-act="haut"],
+    .wf-editeur-liste [data-act="bas"] {
+        display: none;
+    }
+
+    .wf-editeur-fond {
+        padding: 0;
+        align-items: stretch;
+    }
+
+    .wf-editeur {
+        max-height: none;
+        border-radius: 0;
+    }
+}
+
+/* ---------- Petit message de confirmation ---------- */
+.wf-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 32px;
+    z-index: 2100;
+    padding: 0.7em 1.2em 0.7em 3em;
+    transform: translateX(-50%);
+    color: var(--wf-texte, #E9E6E1);
+    background: #141418 url("../assets/img/blason-256.webp") 0.6em center / 1.8em no-repeat;
+    border: 1px solid rgba(167, 176, 186, 0.3);
+    border-left: 3px solid #A3232E;
+    border-radius: 3px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    animation: wf-toast-entree 0.35s var(--wf-courbe, ease) both;
+}
+
+.wf-toast-erreur {
+    border-left-color: #E05A2B;
+}
+
+.wf-toast-sortie {
+    transition: opacity 0.4s, transform 0.4s;
+    opacity: 0;
+    transform: translate(-50%, 10px);
+}
+
+@keyframes wf-toast-entree {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 16px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #wf-page,
+    .wf-editeur,
+    .wf-attente-loup {
+        animation: none;
+    }
+}

@@ -3,7 +3,10 @@
    - Icônes du site (favicon, écran d'accueil du téléphone)
    - Thème du tableau de bord (Jellyfin n'y charge pas le CSS personnalisé)
    - Repère de la page d'accueil (masque les doublons de la barre du haut)
-   - Tuile « Favoris » parmi les grandes tuiles de l'accueil
+   - Tuiles « Sagas », « Cycles » et « Favoris » parmi les grandes tuiles de l'accueil
+   - Signet de sang sur les affiches en favori
+   - « Vu » coché : remet la lecture à zéro et retire la carte de « Continuer »
+   - Charge le module Sagas & Cycles (js/wolfflix-sagas.js)
    - Traînée d'empreintes derrière le curseur (ordinateur uniquement)
    - Inclinaison des affiches vers la souris (ordinateur uniquement)
    Désactiver : décocher le script dans Tableau de bord → JS Injector.
@@ -14,7 +17,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v0.3.1';
+    var VERSION = 'v0.4.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -68,23 +71,130 @@
         var tableau = /^#\/(dashboard|metadata|configurationpage)/.test(h);
         var accueil = (h === '' || h === '#/' || /^#\/home(\?|$)/.test(h)) && !/[?&]tab=1/.test(h);
         html.classList.toggle('wf-tableau', tableau);
+        try { window.dispatchEvent(new CustomEvent('wf-route', { detail: h })); } catch (e) { /* ancien navigateur */ }
         html.classList.toggle('wf-accueil', accueil);
         cssTableau(tableau);
     }
 
-    /* ---------- 3. Tuile « Favoris » sur l'accueil ---------- */
+    /* ---------- 3. Tuiles « Sagas », « Cycles », « Favoris » sur l'accueil ---------- */
+    var TUILES = [
+        { cle: 'sagas', href: '#/home?wf=sagas', icone: 'theaters', texte: 'Sagas' },
+        { cle: 'cycles', href: '#/home?wf=cycles', icone: 'all_inclusive', texte: 'Cycles' },
+        { cle: 'favoris', href: '#/home?tab=1', icone: 'favorite', texte: 'Favoris' }
+    ];
     function tuiles() {
         if (!html.classList.contains('wf-accueil')) return;
-        var conteneurs = document.querySelectorAll('.homeLibraryButtonContainer');
-        conteneurs.forEach(function (c) {
-            if (c.querySelector('.wf-tuile-favoris')) return;
-            var a = document.createElement('a');
-            a.setAttribute('is', 'emby-linkbutton');
-            a.href = '#/home?tab=1';
-            a.className = 'raised homeLibraryButton emby-button wf-tuile wf-tuile-favoris';
-            a.innerHTML = '<span class="material-icons homeLibraryIcon favorite" aria-hidden="true"></span><span class="homeLibraryText">Favoris</span>';
-            c.appendChild(a);
+        document.querySelectorAll('.homeLibraryButtonContainer').forEach(function (c) {
+            TUILES.forEach(function (t) {
+                if (c.querySelector('.wf-tuile-' + t.cle)) return;
+                var a = document.createElement('a');
+                a.setAttribute('is', 'emby-linkbutton');
+                a.href = t.href;
+                a.className = 'raised homeLibraryButton emby-button wf-tuile wf-tuile-' + t.cle;
+                a.innerHTML = '<span class="material-icons homeLibraryIcon ' + t.icone + '" aria-hidden="true"></span><span class="homeLibraryText">' + t.texte + '</span>';
+                c.appendChild(a);
+            });
         });
+    }
+
+    /* ---------- 3b. API Jellyfin (petits utilitaires) ---------- */
+    function api() { return window.ApiClient && window.ApiClient.getCurrentUserId && window.ApiClient.getCurrentUserId() ? window.ApiClient : null; }
+
+    /* ---------- 3c. Signet de sang sur les favoris ---------- */
+    var favoris = null;          // ensemble des Id en favori
+    var favorisCharge = 0;
+    function chargerFavoris(force) {
+        var a = api();
+        if (!a) return;
+        if (!force && Date.now() - favorisCharge < 60000) return;
+        favorisCharge = Date.now();
+        a.getJSON(a.getUrl('Users/' + a.getCurrentUserId() + '/Items', {
+            Recursive: true, Filters: 'IsFavorite', Fields: 'ParentId',
+            EnableImages: false, EnableUserData: false,
+            IncludeItemTypes: 'Movie,Series,Season,Episode,BoxSet,Video,MusicAlbum,Book'
+        })).then(function (r) {
+            favoris = {};
+            (r.Items || []).forEach(function (i) { favoris[i.Id] = true; });
+            marquerFavoris();
+        }).catch(function () { /* hors ligne : on réessaiera */ });
+    }
+    function marquerFavoris() {
+        if (!favoris) return;
+        document.querySelectorAll('.card[data-id]').forEach(function (carte) {
+            var est = !!favoris[carte.getAttribute('data-id')];
+            var scal = carte.querySelector('.cardScalable');
+            if (!scal) return;
+            var signet = scal.querySelector(':scope > .wf-signet');
+            if (est && !signet) {
+                signet = document.createElement('span');
+                signet.className = 'wf-signet';
+                signet.setAttribute('aria-hidden', 'true');
+                signet.innerHTML = '<span class="material-icons favorite"></span>';
+                scal.appendChild(signet);
+            } else if (!est && signet) {
+                signet.remove();
+            }
+        });
+        // Affiche de la fiche
+        var m = /[?&]id=([0-9a-f]{32})/i.exec(location.hash);
+        var affiche = document.querySelector('.detailImageContainer .card');
+        if (m && affiche && !affiche.getAttribute('data-id')) affiche.setAttribute('data-id', m[1]);
+    }
+
+    /* ---------- 3d. Clics sur « Vu » et « Favori » ---------- */
+    function remettreAZero(id) {
+        var a = api();
+        if (!a) return;
+        var corps = JSON.stringify({ PlaybackPositionTicks: 0 });
+        a.ajax({
+            type: 'POST', contentType: 'application/json', data: corps,
+            url: a.getUrl('UserItems/' + id + '/UserData', { userId: a.getCurrentUserId() })
+        }).catch(function () {
+            return a.ajax({
+                type: 'POST', contentType: 'application/json', data: corps,
+                url: a.getUrl('Users/' + a.getCurrentUserId() + '/Items/' + id + '/UserData')
+            });
+        }).catch(function () { /* sans gravité */ });
+    }
+    function retirerDeContinuer(id) {
+        document.querySelectorAll('.itemsContainer[data-monitor*="videoplayback"] .card[data-id="' + id + '"]').forEach(function (c) {
+            c.classList.add('wf-retrait');
+            setTimeout(function () { c.remove(); }, 450);
+        });
+    }
+    function surClic(e) {
+        var bouton = e.target.closest && e.target.closest('button[is="emby-playstatebutton"], button[is="emby-ratingbutton"]');
+        if (!bouton) return;
+        var id = bouton.getAttribute('data-id');
+        if (!id) return;
+        var lecture = bouton.getAttribute('is') === 'emby-playstatebutton';
+        // Le bouton garde le focus après le clic : on le relâche pour que la carte se repose
+        setTimeout(function () { if (document.activeElement === bouton) bouton.blur(); }, 0);
+        setTimeout(function () {
+            if (lecture) {
+                if (bouton.classList.contains('playstatebutton-played')) {
+                    remettreAZero(id);
+                    retirerDeContinuer(id);
+                }
+            } else {
+                var icone = bouton.querySelector('.material-icons');
+                var est = !!(icone && icone.classList.contains('ratingbutton-icon-withrating'));
+                if (!favoris) favoris = {};
+                if (est) favoris[id] = true; else delete favoris[id];
+                marquerFavoris();
+            }
+        }, 500);
+    }
+
+    /* ---------- 3e. Module Sagas & Cycles ---------- */
+    function chargerModules() {
+        window.WolfFlix = { VERSION: VERSION, BASE: BASE };
+        if (document.getElementById('wf-sagas-js')) return;
+        var s = document.createElement('script');
+        s.id = 'wf-sagas-js';
+        s.src = BASE + 'js/wolfflix-sagas.js';
+        s.defer = true;
+        document.head.appendChild(s);
     }
 
     /* ---------- Surveillance légère des changements de page ---------- */
@@ -96,6 +206,7 @@
             prevu = false;
             if ((location.hash || '') !== dernierHash) route();
             tuiles();
+            if (favoris) marquerFavoris(); else chargerFavoris();
         });
     }
 
@@ -235,6 +346,9 @@
         new MutationObserver(planifier).observe(document.body, { childList: true, subtree: true });
         traineeEmpreintes();
         inclinaison();
+        document.addEventListener('click', surClic, true);
+        window.addEventListener('wf-route', function () { chargerFavoris(false); });
+        chargerModules();
     }
 
     if (document.readyState === 'loading') {

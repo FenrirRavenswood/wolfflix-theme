@@ -150,8 +150,7 @@
         pointer-events: none;
     }
 
-    .card:hover .cardScalable,
-    .card:focus-within .cardScalable {
+    .card:hover .cardScalable {
         transform: perspective(700px) rotateX(var(--wf-rx, 0deg)) rotateY(var(--wf-ry, 0deg)) translateY(-8px) scale(1.08);
         box-shadow: 0 22px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(213, 219, 225, 0.22);
     }
@@ -360,4 +359,59 @@ html.wf-accueil .MuiToolbar-root .MuiButton-root:not([href="#/"]) {
 /* Rangée « Mes médias » : les tuiles sur une seule ligne quand la place le permet */
 .homeLibraryButtonContainer {
     gap: 0.6em;
+}
+
+/* ---------- Signet de sang sur les favoris (posé par le module JS) ---------- */
+.wf-signet {
+    position: absolute;
+    top: -2px;
+    left: 9%;
+    z-index: 3;
+    width: 22px;
+    height: 32px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 5px;
+    box-sizing: border-box;
+    pointer-events: none;
+    background: linear-gradient(180deg, #5E1219, #A3232E 55%, #C73441);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
+    filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.7));
+    transform-origin: top center;
+    animation: wf-signet 0.5s cubic-bezier(.2, 1.3, .4, 1) both;
+}
+
+.wf-signet .material-icons {
+    font-size: 12px;
+    color: #F3E9E4;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+}
+
+.detailImageContainer .wf-signet {
+    width: 30px;
+    height: 44px;
+    padding-top: 7px;
+}
+
+.detailImageContainer .wf-signet .material-icons {
+    font-size: 16px;
+}
+
+@keyframes wf-signet {
+    from {
+        transform: scaleY(0);
+    }
+
+    to {
+        transform: scaleY(1);
+    }
+}
+
+/* Carte retirée de « Continuer de regarder » après « Vu » */
+.card.wf-retrait {
+    transition: opacity 0.4s, transform 0.4s;
+    opacity: 0;
+    transform: scale(0.85);
+    pointer-events: none;
 }
