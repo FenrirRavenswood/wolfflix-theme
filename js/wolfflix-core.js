@@ -6,7 +6,7 @@
    - Tuiles « Sagas », « Cycles » et « Favoris » parmi les grandes tuiles de l'accueil
    - Signet de sang sur les affiches en favori
    - « Vu » coché : remet la lecture à zéro et retire la carte de « Continuer »
-   - Charge le module Sagas & Cycles (js/wolfflix-sagas.js)
+   - Charge les modules Sagas & Cycles et Bandes-annonces
    - Traînée d'empreintes derrière le curseur (ordinateur uniquement)
    - Inclinaison des affiches vers la souris (ordinateur uniquement)
    Désactiver : décocher le script dans Tableau de bord → JS Injector.
@@ -17,7 +17,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v0.4.0';
+    var VERSION = 'v0.5.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -189,12 +189,19 @@
     /* ---------- 3e. Module Sagas & Cycles ---------- */
     function chargerModules() {
         window.WolfFlix = { VERSION: VERSION, BASE: BASE };
-        if (document.getElementById('wf-sagas-js')) return;
-        var s = document.createElement('script');
-        s.id = 'wf-sagas-js';
-        s.src = BASE + 'js/wolfflix-sagas.js';
-        s.defer = true;
-        document.head.appendChild(s);
+        var config = window.WolfFlixConfig || {};
+        var modules = [];
+        if (config.sagas !== false) modules.push('sagas');
+        if (config.bandesAnnonces !== false) modules.push('bandes-annonces');
+        modules.forEach(function (nom) {
+            var id = 'wf-js-' + nom;
+            if (document.getElementById(id)) return;
+            var s = document.createElement('script');
+            s.id = id;
+            s.src = BASE + 'js/wolfflix-' + nom + '.js';
+            s.defer = true;
+            document.head.appendChild(s);
+        });
     }
 
     /* ---------- Surveillance légère des changements de page ---------- */

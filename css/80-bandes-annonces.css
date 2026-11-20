@@ -1,0 +1,128 @@
+/* =====================================================================
+   WolfFlix — 80 · Bandes-annonces (bouton + lecteur)
+   Habille ce que pose js/wolfflix-bandes-annonces.js.
+   Quand le module est actif, le bouton bande-annonce natif est masqué.
+   ===================================================================== */
+html.wf-ba-actif .btnPlayTrailer {
+    display: none !important;
+}
+
+.wf-btn-ba {
+    animation: wf-ba-apparition 0.4s var(--wf-courbe, ease) both;
+}
+
+@keyframes wf-ba-apparition {
+    from {
+        opacity: 0;
+        transform: scale(0.6);
+    }
+}
+
+.wf-ba-fond {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2vh 3vw;
+    background: rgba(4, 4, 6, 0.88);
+    backdrop-filter: blur(4px);
+    animation: wf-fondu 0.2s ease both;
+}
+
+.wf-ba {
+    width: min(1100px, 100%, calc((100vh - 170px) * 16 / 9));
+    animation: wf-page-entree var(--wf-normal, 320ms) var(--wf-courbe, ease) both;
+}
+
+.wf-ba-haut {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1em;
+    margin-bottom: 0.7em;
+}
+
+.wf-ba-surtitre {
+    margin: 0;
+    font-family: var(--wf-titre, serif);
+    font-size: 0.85rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-ba-titre {
+    margin: 0.1em 0 0;
+    font-family: var(--wf-titre, serif);
+    font-weight: 400;
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+}
+
+.wf-ba-fermer {
+    display: inline-flex;
+    padding: 0.4em;
+    background: rgba(20, 20, 24, 0.9);
+    border: 1px solid rgba(167, 176, 186, 0.35);
+    border-radius: 50%;
+    color: var(--wf-acier-clair, #D5DBE1);
+    transition: border-color var(--wf-rapide, 160ms), color var(--wf-rapide, 160ms), transform var(--wf-rapide, 160ms);
+}
+
+.wf-ba-fermer:hover {
+    border-color: #C73441;
+    color: #FFF;
+    transform: rotate(90deg);
+}
+
+.wf-ba-video {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border: 1px solid rgba(167, 176, 186, 0.25);
+    border-top: 2px solid #A3232E;
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.8), 0 0 60px rgba(163, 35, 46, 0.15);
+}
+
+.wf-ba-video iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.wf-ba-mention {
+    margin: 0.7em 0 0;
+    font-size: 0.78em;
+    color: var(--wf-acier, #A7B0BA);
+}
+
+.wf-ba-tmdb {
+    display: inline-block;
+    margin-right: 0.5em;
+    padding: 0 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: #0D253F;
+    background: linear-gradient(90deg, #90CEA1, #01B4E4);
+}
+
+@keyframes wf-fondu {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes wf-page-entree {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+}
+
+html.wf-modale-ouverte body {
+    overflow: hidden;
+}

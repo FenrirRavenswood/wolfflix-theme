@@ -351,3 +351,9 @@
 .itemDetailPage .listItem:hover {
     background: rgba(167, 176, 186, 0.06);
 }
+
+/* ---------- Titre original et piste vidéo masqués ---------- */
+.nameContainer .originalTitle,
+.selectVideoContainer {
+    display: none !important;
+}

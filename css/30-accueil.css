@@ -415,3 +415,24 @@ html.wf-accueil .MuiToolbar-root .MuiButton-root:not([href="#/"]) {
     transform: scale(0.85);
     pointer-events: none;
 }
+
+/* ---------- Grandes tuiles : toutes sur une ligne (ordinateur) ---------- */
+@media all and (min-width: 50em) {
+    .homeLibraryButtonContainer {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+    }
+
+    .homeLibraryButton {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        margin: 0.4em !important;
+        font-size: 1em !important;
+    }
+
+    .homeLibraryButton .homeLibraryText {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}

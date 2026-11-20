@@ -13,14 +13,116 @@
     overflow-y: visible;
     padding-top: 10px;
     padding-bottom: 14px;
-    scroll-snap-type: x proximity;
-    scrollbar-width: thin;
+    scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+}
+
+.wf-rangee::-webkit-scrollbar {
+    display: none;
 }
 
 .wf-rangee > .card {
     flex: 0 0 auto;
-    scroll-snap-align: start;
+}
+
+/* En-tête de rangée : titre à gauche, flèches à droite (comme Jellyfin) */
+.wf-section-entete {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.wf-section-entete .sectionTitle {
+    margin-left: 0;
+}
+
+.wf-fleches {
+    display: flex;
+    gap: 0.2em;
+}
+
+.wf-fleche {
+    display: inline-flex;
+    padding: 0.3em;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    color: var(--wf-acier-clair, #D5DBE1);
+    transition: color var(--wf-rapide, 160ms), background var(--wf-rapide, 160ms);
+}
+
+.wf-fleche:hover {
+    color: #FFF;
+    background: rgba(199, 52, 65, 0.25);
+}
+
+@media (hover: none) {
+    .wf-fleches {
+        display: none;
+    }
+}
+
+/* Carte « + Ajouter » au bout de l'ordre de visionnage */
+.wf-carte-ajout {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+}
+
+.wf-ajout-contenu {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3em;
+    border: 1px dashed rgba(167, 176, 186, 0.45);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--wf-acier-clair, #D5DBE1);
+    font-family: var(--wf-titre, serif);
+    transition: border-color var(--wf-rapide, 160ms), color var(--wf-rapide, 160ms), background var(--wf-rapide, 160ms);
+}
+
+.wf-ajout-contenu .material-icons {
+    font-size: 3em;
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-carte-ajout:hover .wf-ajout-contenu {
+    border-color: #C73441;
+    background: rgba(163, 35, 46, 0.12);
+    color: #FFF;
+}
+
+.wf-ordre-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    flex-wrap: wrap;
+}
+
+/* Éditeur : le champ de recherche s'ouvre avec le bouton + */
+.wf-editeur-ajout .wf-champ,
+.wf-editeur-ajout .wf-editeur-resultats {
+    display: none;
+}
+
+.wf-editeur-ajout.wf-ouvert .wf-champ,
+.wf-editeur-ajout.wf-ouvert .wf-editeur-resultats {
+    display: flex;
+}
+
+.wf-editeur-ajout.wf-ouvert .wf-editeur-resultats {
+    flex-direction: column;
+}
+
+.wf-editeur-ajout.wf-ouvert .wf-editeur-plus {
+    display: none;
 }
 
 .wf-section .wf-titre-lien {

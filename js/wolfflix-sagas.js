@@ -194,10 +194,25 @@
 
     function rangee(titre, cartes, cle, lien) {
         return '<div class="verticalSection wf-section wf-section-' + cle + '">' +
-            '<h2 class="sectionTitle sectionTitle-cards padded-left">' +
+            '<div class="wf-section-entete padded-left padded-right">' +
+            '<h2 class="sectionTitle sectionTitle-cards">' +
             (lien ? '<a class="wf-titre-lien" href="' + lien + '">' + esc(titre) + ' <span class="material-icons chevron_right" aria-hidden="true"></span></a>' : esc(titre)) +
-            '</h2><div class="wf-rangee padded-left padded-right">' + cartes.join('') + '</div></div>';
+            '</h2>' + fleches() + '</div>' +
+            '<div class="wf-rangee padded-left padded-right">' + cartes.join('') + '</div></div>';
     }
+    function fleches() {
+        return '<div class="wf-fleches">' +
+            '<button type="button" class="wf-fleche" data-wf-fleche="-1" aria-label="Précédent"><span class="material-icons chevron_left"></span></button>' +
+            '<button type="button" class="wf-fleche" data-wf-fleche="1" aria-label="Suivant"><span class="material-icons chevron_right"></span></button></div>';
+    }
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest && e.target.closest('[data-wf-fleche]');
+        if (!b) return;
+        var sec = b.closest('.wf-section, #wf-ordre');
+        var r = sec && sec.querySelector('.wf-rangee');
+        if (!r) return;
+        r.scrollBy({ left: +b.getAttribute('data-wf-fleche') * r.clientWidth * 0.8, behavior: 'smooth' });
+    });
 
     function compte(c) {
         var n = c.ids.length;
@@ -474,8 +489,10 @@
             if (dernierVu === -1) prochain = -1;
             bloc.innerHTML = '<div class="wf-ordre-entete padded-right">' +
                 '<h2 class="sectionTitle sectionTitle-cards">Ordre de visionnage' + (perso ? ' <span class="wf-pastille">personnalisé</span>' : '') + '</h2>' +
-                (admin ? '<button type="button" class="wf-btn wf-btn-sec wf-ordre-modifier"><span class="material-icons reorder" aria-hidden="true"></span> Modifier l\'ordre</button>' : '') +
-                '</div><div class="wf-rangee">' +
+                '<div class="wf-ordre-actions">' +
+                (admin ? '<button type="button" class="wf-btn wf-btn-sec wf-ordre-ajouter"><span class="material-icons add" aria-hidden="true"></span> Ajouter</button>' +
+                    '<button type="button" class="wf-btn wf-btn-sec wf-ordre-modifier"><span class="material-icons reorder" aria-hidden="true"></span> Modifier l\'ordre</button>' : '') +
+                fleches() + '</div></div><div class="wf-rangee">' +
                 enfants.map(function (e, k) {
                     return carte({
                         id: e.Id, nom: e.Name, tag: e.ImageTags && e.ImageTags.Primary,
@@ -484,28 +501,36 @@
                         ruban: k === prochain ? 'À suivre' : '',
                         classe: k === prochain ? 'wf-prochain' : ''
                     });
-                }).join('') + '</div>';
+                }).join('') +
+                (admin ? '<button type="button" class="card overflowPortraitCard portraitCard wf-carte-ajout" aria-label="Ajouter un titre">' +
+                    '<div class="cardBox cardBox-bottompadded"><div class="cardScalable"><div class="cardPadder cardPadder-portrait"></div>' +
+                    '<div class="cardContent wf-ajout-contenu"><span class="material-icons add"></span><span>Ajouter</span></div></div></div></button>' : '') +
+                '</div>';
             images(bloc);
             var p = pageFiche();
             if (p) p.classList.add('wf-collection-ordonnee');
             var b = bloc.querySelector('.wf-ordre-modifier');
-            if (b) b.addEventListener('click', function () { editeur(item, enfants, t, bloc); });
+            if (b) b.addEventListener('click', function () { editeur(item, enfants, t, bloc, false); });
+            bloc.querySelectorAll('.wf-ordre-ajouter, .wf-carte-ajout').forEach(function (x) {
+                x.addEventListener('click', function () { editeur(item, enfants, t, bloc, true); });
+            });
         }).catch(function () {
             bloc.remove();
         });
     }
 
     /* ---------- Éditeur d'ordre ---------- */
-    function editeur(item, enfants, t, bloc) {
+    function editeur(item, enfants, t, bloc, ajout) {
         var liste = enfants.map(function (e) { return { id: e.Id, nom: e.Name, annee: e.ProductionYear || '', tag: e.ImageTags && e.ImageTags.Primary }; });
         var initiaux = liste.map(function (e) { return e.id; });
         var fond = document.createElement('div');
         fond.className = 'wf-editeur-fond';
         fond.innerHTML = '<div class="wf-editeur" role="dialog" aria-modal="true" aria-label="Ordre de visionnage">' +
             '<header><p class="wf-page-surtitre">' + NOMS[t].un + '</p><h2>' + esc(item.Name) + '</h2>' +
-            '<p class="wf-aide">Glisse les titres par la poignée, ou utilise les flèches.</p></header>' +
+            '<p class="wf-aide">Glisse les titres par la poignée, ou utilise les flèches. Le bouton + ajoute un film ou une série.</p></header>' +
             '<ol class="wf-editeur-liste"></ol>' +
-            '<div class="wf-editeur-ajout"><label class="wf-champ"><span class="material-icons add" aria-hidden="true"></span>' +
+            '<div class="wf-editeur-ajout"><button type="button" class="wf-btn wf-btn-sec wf-editeur-plus" data-act="plus"><span class="material-icons add" aria-hidden="true"></span> Ajouter un titre</button>' +
+            '<label class="wf-champ"><span class="material-icons search" aria-hidden="true"></span>' +
             '<input type="search" placeholder="Ajouter un film ou une série…" aria-label="Ajouter un film ou une série"></label>' +
             '<div class="wf-editeur-resultats"></div></div>' +
             '<footer><span class="wf-editeur-etat"></span><button type="button" class="wf-btn wf-btn-sec" data-act="annuler">Annuler</button>' +
@@ -566,6 +591,7 @@
                 }
                 b.disabled = true;
             }
+            else if (act === 'plus') ouvrirAjout();
             else if (act === 'annuler') fermer();
             else if (act === 'enregistrer') enregistrer();
         });
@@ -605,6 +631,11 @@
 
         // Recherche
         var champ = fond.querySelector('.wf-editeur-ajout input');
+        function ouvrirAjout() {
+            fond.querySelector('.wf-editeur-ajout').classList.add('wf-ouvert');
+            champ.focus();
+        }
+        if (ajout) setTimeout(ouvrirAjout, 50);
         var res = fond.querySelector('.wf-editeur-resultats');
         var minuterie;
         champ.addEventListener('input', function () {
