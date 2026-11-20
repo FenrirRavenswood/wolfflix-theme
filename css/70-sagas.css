@@ -778,3 +778,8 @@ html.wf-modale-ouverte body {
 .wf-creation .wf-champ {
     display: flex;
 }
+
+/* Éléments masqués */
+.wf-btn[hidden] {
+    display: none !important;
+}

@@ -19,7 +19,7 @@ Thème personnel pour l'interface web de Jellyfin 12.4 : dark fantasy, palette s
 | `css/90-series.css` | Statut, prochain épisode, grille des notes des épisodes | CSS (+ JS) |
 | `css/95-finitions.css` | Transitions de page, onglets, abécédaire, compteurs, cases à cocher, dialogues | CSS seul |
 | `js/wolfflix-sagas.js` | Sagas (collections de films) et Cycles (collections avec séries) : pages, rangées « à suivre » et « ajoutées récemment », ordre perso enregistré dans les métadonnées (identifiant `WolfFlix`, repli sur une étiquette `wfordre:`) | JavaScript |
-| `js/wolfflix-series.js` | Fiche série : statut, « Prochain épisode / Reprendre », grille des notes (fermée par défaut, anti-spoil) | JavaScript |
+| `js/wolfflix-series.js` | Fiche série : statut, « Prochain épisode / Reprendre / Film lié », grille des notes + classement parmi tes séries ; saisons : films liés ; listes : séries sans fichier masquées | JavaScript |
 | `js/wolfflix-bandes-annonces.js` | Bouton « Bande-annonce » : VF via TMDB, sinon VO, lue dans un lecteur WolfFlix | JavaScript |
 
 ## Installation
@@ -29,19 +29,19 @@ Thème personnel pour l'interface web de Jellyfin 12.4 : dark fantasy, palette s
 Copier tout ce bloc, coller, **Enregistrer** :
 
 ```css
-/* WolfFlix — thème Sang et acier — v1.0.0
+/* WolfFlix — thème Sang et acier — v1.1.0
    À coller dans : Tableau de bord → Général → Code CSS personnalisé
    Pour désactiver un module : mettre sa ligne en commentaire (barre oblique + étoile avant, étoile + barre oblique après). */
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/00-fondations.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/10-identite.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/20-navigation.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/30-accueil.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/40-fiches.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/50-lecteur.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/70-sagas.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/80-bandes-annonces.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/90-series.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/95-finitions.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.1.0/css/00-fondations.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.1.0/css/10-identite.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.1.0/css/20-navigation.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.1.0/css/30-accueil.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.1.0/css/40-fiches.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.1.0/css/50-lecteur.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.1.0/css/70-sagas.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.1.0/css/80-bandes-annonces.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.1.0/css/90-series.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.1.0/css/95-finitions.css");
 ```
 
 ### 2. JavaScript — Tableau de bord → JS Injector
@@ -66,13 +66,18 @@ window.WolfFlixConfig = {
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.1.0/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();
 ```
 
-### 3. Recharger
+### 3. Réglage conseillé (une fois)
+
+Tableau de bord → Bibliothèques → **Affichage** → cocher **« Grouper les séries dans des collections »**
+(et « Grouper les films dans des collections »). WolfFlix montre alors les **Sagas** dans Films et les **Cycles** dans Séries / Kai.
+
+### 4. Recharger
 
 Ctrl + F5 sur ordinateur ; sur téléphone, fermer et rouvrir l'onglet.
 
@@ -80,7 +85,7 @@ Ctrl + F5 sur ordinateur ; sur téléphone, fermer et rouvrir l'onglet.
 
 - **Un module** : mettre sa ligne en commentaire, par exemple
   `/* @import url(".../10-identite.css"); */`
-- **Revenir à une version précédente** : remplacer le numéro (`@v1.0.0`) par l'ancien, dans le CSS et dans le script JS Injector.
+- **Revenir à une version précédente** : remplacer le numéro (`@v1.1.0`) par l'ancien, dans le CSS et dans le script JS Injector.
 - **Tout le thème** : vider le champ Code CSS personnalisé, ou y recoller l'ancienne sauvegarde.
 - **Le module JavaScript** : décocher « Enabled » sur le script dans JS Injector.
 - **Pour un seul utilisateur** : Paramètres → Affichage → « Désactiver le code CSS personnalisé fourni par le serveur ».
@@ -97,4 +102,5 @@ Le numéro de version garantit que tous les appareils chargent exactement les m�
 
 - Polices IM Fell English SC et Spectral : SIL Open Font License 1.1 (voir `fonts/`).
 - Blason, curseurs et images : créations personnelles pour WolfFlix.
+- Couleurs de la grille des notes : reprises de [Jellyfin Episodes Ratings Grid](https://github.com/Damocles-fr/jellyfin-imdb-episodes-heatmap-ratings-grid) de Damocles-fr (licence MIT).
 - Bandes-annonces : vidéos trouvées via l'API TMDB. Ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB.

@@ -1,9 +1,12 @@
 /* =====================================================================
    WolfFlix — Module « Bandes-annonces » (chargé par wolfflix-core.js)
-   Ajoute un bouton « Bande-annonce » sur les fiches de films, séries,
-   saisons et épisodes. La vidéo est cherchée sur TMDB : d'abord en
-   français, sinon en anglais. Elle se lit dans un lecteur WolfFlix
-   (YouTube intégré, sans cookies publicitaires).
+   Bouton « Bande-annonce » sur les fiches :
+   - film : bande-annonce du film ;
+   - série : bande-annonce de la saison 1 (sinon de la série) ;
+   - saison / épisode : bande-annonce de cette saison (sinon de la série).
+   Recherche sur TMDB : vidéos françaises d'abord, anglaises ensuite.
+   Si YouTube refuse une vidéo (supprimée, privée, intégration interdite),
+   le lecteur passe tout seul à la suivante.
    Nécessite une clé API TMDB (v3) dans WolfFlixConfig.tmdb.
    Ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB.
    ===================================================================== */
@@ -15,13 +18,13 @@
 
     var config = window.WolfFlixConfig || {};
     var cle = String(config.tmdb || '').trim();
-    if (!cle) return;
+    if (!cle || /COLLE_TA_CLE/.test(cle)) return;
 
     var html = document.documentElement;
     html.classList.add('wf-ba-actif');
 
     var TMDB = 'https://api.themoviedb.org/3/';
-    var trouvees = {};      // id Jellyfin → Promise<{ cle, langue, nom } | null>
+    var trouvees = {};
 
     function api() {
         var a = window.ApiClient;
@@ -41,103 +44,170 @@
         });
     }
 
-    function meilleure(resultats) {
-        var yt = (resultats || []).filter(function (v) { return v.site === 'YouTube' && v.key; });
+    /* Toutes les vidéos utilisables, triées : VF d'abord, bande-annonce > teaser, officielle, récente */
+    function candidats(resultats) {
         function score(v) {
             var s = 0;
             if (v.type === 'Trailer') s += 100;
             else if (v.type === 'Teaser') s += 50;
             else return -1;
+            if (v.iso_639_1 === 'fr') s += 1000;
             if (v.official) s += 20;
             if (v.size >= 1080) s += 5;
             return s;
         }
-        yt = yt.filter(function (v) { return score(v) >= 0; });
-        yt.sort(function (a, b) {
-            return score(b) - score(a) || String(b.published_at || '').localeCompare(String(a.published_at || ''));
-        });
-        return yt[0] || null;
+        return (resultats || [])
+            .filter(function (v) { return v.site === 'YouTube' && v.key && score(v) >= 0; })
+            .sort(function (a, b) {
+                return score(b) - score(a) || String(b.published_at || '').localeCompare(String(a.published_at || ''));
+            })
+            .map(function (v) { return { cle: v.key, langue: v.iso_639_1 === 'fr' ? 'VF' : 'VO', nom: v.name }; });
+    }
+    function videos(chemin) {
+        return tmdb(chemin, { language: 'fr-FR', include_video_language: 'fr,en' })
+            .then(function (r) { return candidats(r.results); })
+            .catch(function () { return []; });
     }
 
-    // Retrouve l'identifiant TMDB (film ou série) d'un élément Jellyfin
-    function cible(item) {
-        var a = api();
-        var ids = item.ProviderIds || {};
-        if (item.Type === 'Movie') {
-            if (ids.Tmdb) return Promise.resolve({ type: 'movie', id: ids.Tmdb });
-            if (ids.Imdb) return parImdb(ids.Imdb, 'movie_results', 'movie');
-            return Promise.resolve(null);
-        }
-        if (item.Type === 'Series') {
-            if (ids.Tmdb) return Promise.resolve({ type: 'tv', id: ids.Tmdb });
-            if (ids.Imdb) return parImdb(ids.Imdb, 'tv_results', 'tv');
-            if (ids.Tvdb) return parExterne(ids.Tvdb, 'tvdb_id', 'tv_results', 'tv');
-            return Promise.resolve(null);
-        }
-        if ((item.Type === 'Season' || item.Type === 'Episode') && item.SeriesId) {
-            return a.getItem(a.getCurrentUserId(), item.SeriesId).then(cible);
-        }
-        return Promise.resolve(null);
-    }
-    function parImdb(imdb, champ, type) { return parExterne(imdb, 'imdb_id', champ, type); }
     function parExterne(id, source, champ, type) {
         return tmdb('find/' + id, { external_source: source }).then(function (r) {
             var t = r[champ] && r[champ][0];
             return t ? { type: type, id: t.id } : null;
         }).catch(function () { return null; });
     }
+    function idTmdb(item) {
+        var ids = item.ProviderIds || {};
+        if (item.Type === 'Movie') {
+            if (ids.Tmdb) return Promise.resolve({ type: 'movie', id: ids.Tmdb });
+            if (ids.Imdb) return parExterne(ids.Imdb, 'imdb_id', 'movie_results', 'movie');
+            return Promise.resolve(null);
+        }
+        if (item.Type === 'Series') {
+            if (ids.Tmdb) return Promise.resolve({ type: 'tv', id: ids.Tmdb });
+            if (ids.Imdb) return parExterne(ids.Imdb, 'imdb_id', 'tv_results', 'tv');
+            if (ids.Tvdb) return parExterne(ids.Tvdb, 'tvdb_id', 'tv_results', 'tv');
+        }
+        return Promise.resolve(null);
+    }
 
     function chercher(item) {
         if (trouvees[item.Id]) return trouvees[item.Id];
-        trouvees[item.Id] = cible(item).then(function (c) {
-            if (!c) return null;
-            var base = c.type + '/' + c.id + '/videos';
-            return tmdb(base, { language: 'fr-FR' }).then(function (r) {
-                var v = meilleure(r.results);
-                if (v) return { cle: v.key, langue: 'VF', nom: v.name };
-                return tmdb(base, { language: 'en-US' }).then(function (r2) {
-                    var v2 = meilleure(r2.results);
-                    return v2 ? { cle: v2.key, langue: 'VO', nom: v2.name } : null;
+        var a = api();
+        var p;
+        if (item.Type === 'Movie') {
+            p = idTmdb(item).then(function (c) { return c ? videos('movie/' + c.id + '/videos') : []; });
+        } else if (item.Type === 'Series' || item.Type === 'Season' || item.Type === 'Episode') {
+            var saison = item.Type === 'Series' ? 1 : item.Type === 'Season' ? item.IndexNumber : item.ParentIndexNumber;
+            var serie = item.Type === 'Series' ? Promise.resolve(item) : a.getItem(a.getCurrentUserId(), item.SeriesId);
+            p = serie.then(idTmdb).then(function (c) {
+                if (!c) return [];
+                var parSaison = saison > 0 ? videos('tv/' + c.id + '/season/' + saison + '/videos') : Promise.resolve([]);
+                return parSaison.then(function (l) {
+                    return videos('tv/' + c.id + '/videos').then(function (g) {
+                        var vus = {};
+                        return l.concat(g).filter(function (v) { if (vus[v.cle]) return false; vus[v.cle] = true; return true; });
+                    });
                 });
             });
-        }).catch(function () {
+        } else {
+            p = Promise.resolve([]);
+        }
+        trouvees[item.Id] = p.then(function (l) { return l.slice(0, 10); }).catch(function () {
             delete trouvees[item.Id];
-            return null;
+            return [];
         });
         return trouvees[item.Id];
     }
 
+    /* ---------- API YouTube (pour détecter les vidéos indisponibles) ---------- */
+    var apiYt = null;
+    function chargerApiYt() {
+        if (apiYt) return apiYt;
+        apiYt = new Promise(function (ok) {
+            if (window.YT && window.YT.Player) { ok(window.YT); return; }
+            var avant = window.onYouTubeIframeAPIReady;
+            window.onYouTubeIframeAPIReady = function () {
+                if (typeof avant === 'function') avant();
+                ok(window.YT);
+            };
+            var s = document.createElement('script');
+            s.src = 'https://www.youtube.com/iframe_api';
+            s.onerror = function () { ok(null); };
+            document.head.appendChild(s);
+            setTimeout(function () { ok(window.YT && window.YT.Player ? window.YT : null); }, 6000);
+        });
+        return apiYt;
+    }
+
     /* ---------- Lecteur WolfFlix ---------- */
-    function ouvrir(ba, titre) {
+    function ouvrir(liste, titre) {
+        var index = 0;
         var fond = document.createElement('div');
         fond.className = 'wf-ba-fond';
         fond.innerHTML = '<div class="wf-ba" role="dialog" aria-modal="true" aria-label="Bande-annonce">' +
-            '<div class="wf-ba-haut"><div><p class="wf-ba-surtitre">Bande-annonce · ' + ba.langue + '</p>' +
+            '<div class="wf-ba-haut"><div><p class="wf-ba-surtitre"></p>' +
             '<h2 class="wf-ba-titre">' + esc(titre) + '</h2></div>' +
             '<button type="button" class="wf-ba-fermer" aria-label="Fermer"><span class="material-icons close"></span></button></div>' +
-            '<div class="wf-ba-video"><iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(ba.cle) +
-            '?autoplay=1&rel=0&modestbranding=1&playsinline=1&hl=fr&cc_lang_pref=fr&origin=' + encodeURIComponent(location.origin) +
-            '" title="' + esc(ba.nom || titre) + '"' +
-            // Jellyfin interdit l'envoi du « referrer » ; YouTube l'exige (erreur 153) : on l'autorise pour ce lecteur seulement
-            ' referrerpolicy="strict-origin-when-cross-origin"' +
-            ' allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>' +
+            '<div class="wf-ba-video"></div>' +
             '<div class="wf-ba-bas"><p class="wf-ba-mention"><span class="wf-ba-tmdb">TMDB</span> Ce produit utilise l\'API TMDB mais n\'est ni approuvé ni certifié par TMDB.</p>' +
-            '<a class="wf-ba-youtube" href="https://www.youtube.com/watch?v=' + encodeURIComponent(ba.cle) + '" target="_blank" rel="noopener">' +
-            '<span class="material-icons open_in_new" aria-hidden="true"></span> Ouvrir sur YouTube</a></div>' +
-            '</div>';
+            '<span class="wf-ba-liens"></span></div></div>';
         document.body.appendChild(fond);
         html.classList.add('wf-modale-ouverte');
+        var cadre = fond.querySelector('.wf-ba-video');
+        var surtitre = fond.querySelector('.wf-ba-surtitre');
+        var liens = fond.querySelector('.wf-ba-liens');
+        var joueur = null;
+
+        function echec() {
+            cadre.innerHTML = '<div class="wf-ba-echec"><span class="material-icons videocam_off" aria-hidden="true"></span>' +
+                '<p>Aucune bande-annonce lisible ici pour l\'instant.</p>' +
+                '<a class="wf-btn wf-btn-sec" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=' +
+                encodeURIComponent(titre + ' bande annonce VF') + '">Chercher sur YouTube</a></div>';
+            surtitre.textContent = 'Bande-annonce';
+            liens.innerHTML = '';
+        }
+        function charger() {
+            if (index >= liste.length) { echec(); return; }
+            var v = liste[index];
+            surtitre.textContent = 'Bande-annonce · ' + v.langue + (liste.length > 1 ? ' · ' + (index + 1) + '/' + liste.length : '');
+            liens.innerHTML = (index + 1 < liste.length ? '<button type="button" class="wf-ba-autre"><span class="material-icons skip_next" aria-hidden="true"></span> Autre vidéo</button>' : '') +
+                '<a class="wf-ba-youtube" href="https://www.youtube.com/watch?v=' + encodeURIComponent(v.cle) + '" target="_blank" rel="noopener">' +
+                '<span class="material-icons open_in_new" aria-hidden="true"></span> YouTube</a>';
+            if (joueur && joueur.destroy) { try { joueur.destroy(); } catch (e) { /* déjà détruit */ } }
+            joueur = null;
+            cadre.innerHTML = '<iframe id="wf-ba-iframe" src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(v.cle) +
+                '?autoplay=1&rel=0&modestbranding=1&playsinline=1&hl=fr&cc_lang_pref=fr&enablejsapi=1&origin=' + encodeURIComponent(location.origin) +
+                '" title="' + esc(v.nom || titre) + '"' +
+                // Jellyfin interdit le « referrer » ; YouTube l'exige (erreur 153) : autorisé pour ce lecteur seulement
+                ' referrerpolicy="strict-origin-when-cross-origin"' +
+                ' allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>';
+            var iframe = cadre.querySelector('iframe');
+            chargerApiYt().then(function (YT) {
+                if (!YT || !iframe.isConnected) return;
+                try {
+                    joueur = new YT.Player(iframe, {
+                        events: {
+                            onError: function () { index++; charger(); }
+                        }
+                    });
+                } catch (e) { /* lecture sans détection */ }
+            });
+        }
         function fermer() {
+            if (joueur && joueur.destroy) { try { joueur.destroy(); } catch (e) { /* rien */ } }
             fond.remove();
             html.classList.remove('wf-modale-ouverte');
             document.removeEventListener('keydown', clavier, true);
+            window.removeEventListener('wf-route', fermer);
         }
         function clavier(e) { if (e.key === 'Escape') { e.stopPropagation(); fermer(); } }
         document.addEventListener('keydown', clavier, true);
         fond.addEventListener('click', function (e) {
             if (e.target === fond || e.target.closest('.wf-ba-fermer')) fermer();
+            else if (e.target.closest('.wf-ba-autre')) { index++; charger(); }
         });
-        window.addEventListener('wf-route', fermer, { once: true });
+        window.addEventListener('wf-route', fermer);
+        charger();
     }
 
     /* ---------- Bouton sur la fiche ---------- */
@@ -165,18 +235,21 @@
         if (enCours[id] || sans[id]) return;
         enCours[id] = true;
         element(id).then(function (item) {
-            return chercher(item).then(function (ba) {
-                if (!ba) { sans[id] = true; return; }
+            return chercher(item).then(function (liste) {
+                if (!liste.length) { sans[id] = true; return; }
                 var p = document.querySelector('#itemDetailPage:not(.hide) .mainDetailButtons');
                 if (!p || p.querySelector('.wf-btn-ba[data-id="' + id + '"]')) return;
                 var b = document.createElement('button');
                 b.type = 'button';
                 b.className = 'wf-btn-ba';
                 b.setAttribute('data-id', id);
-                b.title = 'Bande-annonce (' + ba.langue + ')';
+                var etiquette = item.Type === 'Series' ? 'Saison 1' : (item.Type === 'Season' || item.Type === 'Episode') ? 'Saison ' + (item.IndexNumber && item.Type === 'Season' ? item.IndexNumber : item.ParentIndexNumber) : '';
+                b.title = 'Bande-annonce' + (etiquette ? ' — ' + etiquette : '') + ' (' + liste[0].langue + ')';
                 b.innerHTML = '<span class="wf-btn-ba-icone"><span class="material-icons play_arrow" aria-hidden="true"></span></span>' +
-                    '<span class="wf-btn-ba-texte">Bande-annonce</span><span class="wf-btn-ba-langue">' + ba.langue + '</span>';
-                b.addEventListener('click', function () { ouvrir(ba, item.Name); });
+                    '<span class="wf-btn-ba-texte">Bande-annonce' + (etiquette ? ' <small>' + etiquette + '</small>' : '') + '</span>' +
+                    '<span class="wf-btn-ba-langue">' + liste[0].langue + '</span>';
+                var nom = item.Type === 'Season' || item.Type === 'Episode' ? (item.SeriesName || item.Name) + ' — ' + etiquette : item.Type === 'Series' ? item.Name + ' — Saison 1' : item.Name;
+                b.addEventListener('click', function () { ouvrir(liste, nom); });
                 var lecture = p.querySelector('.btnPlay:not(.hide), .btnResume:not(.hide)');
                 if (lecture && lecture.nextSibling) p.insertBefore(b, lecture.nextSibling);
                 else p.appendChild(b);

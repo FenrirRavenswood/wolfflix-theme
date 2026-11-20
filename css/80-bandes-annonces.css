@@ -225,3 +225,60 @@ html.wf-modale-ouverte body {
 .wf-ba-youtube .material-icons {
     font-size: 1.1em;
 }
+
+/* ---------- v1.1 : vidéo de secours, saison, échec ---------- */
+.wf-btn-ba-texte small {
+    margin-left: 0.3em;
+    font-family: var(--wf-texte-police, serif);
+    font-size: 0.75em;
+    color: var(--wf-acier, #A7B0BA);
+}
+
+.wf-ba-liens {
+    display: inline-flex;
+    align-items: center;
+    gap: 1em;
+}
+
+.wf-ba-autre {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    margin-top: 0.7em;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--wf-acier-clair, #D5DBE1);
+    font: inherit;
+    font-size: 0.85em;
+}
+
+.wf-ba-autre:hover {
+    color: #FFF;
+}
+
+.wf-ba-autre .material-icons {
+    font-size: 1.1em;
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-ba-echec {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6em;
+    color: var(--wf-acier-clair, #D5DBE1);
+    text-align: center;
+}
+
+.wf-ba-echec .material-icons {
+    font-size: 3em;
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-ba-echec .wf-btn {
+    text-decoration: none;
+}

@@ -18,7 +18,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v1.0.0';
+    var VERSION = 'v1.1.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -195,6 +195,8 @@
     }
     function retirerDeContinuer(id) {
         document.querySelectorAll('.itemsContainer[data-monitor*="videoplayback"] .card[data-id="' + id + '"]').forEach(function (c) {
+            var sec = c.closest('.verticalSection');
+            if (sec && sec.querySelector('a[href*="nextup"]')) return;
             c.classList.add('wf-retrait');
             setTimeout(function () { c.remove(); }, 450);
         });

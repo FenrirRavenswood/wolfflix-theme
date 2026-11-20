@@ -164,29 +164,90 @@
     }
 }
 
-/* ---------- Grille des notes ---------- */
+/* Notre encart remplace le bloc « À suivre » natif */
+.wf-avec-prochain .nextUpSection {
+    display: none !important;
+}
+
+/* ---------- Grille des notes (sous les infos de la fiche) ---------- */
+.wf-notes {
+    margin: 1.2em 0 0.6em;
+    max-width: 100%;
+}
+
 .wf-notes-ouvrir {
     display: flex;
     align-items: center;
-    gap: 0.8em;
+    gap: 0.7em;
     width: 100%;
-    padding: 0.4em 0;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid rgba(167, 176, 186, 0.15);
+    max-width: 760px;
+    padding: 0.6em 0.9em;
+    background: linear-gradient(90deg, rgba(23, 23, 28, 0.95), rgba(15, 15, 18, 0.7));
+    border: 1px solid rgba(167, 176, 186, 0.22);
+    border-left: 3px solid #A3232E;
+    border-radius: 4px;
     color: inherit;
     text-align: left;
     font: inherit;
+    transition: border-color var(--wf-rapide, 160ms), background var(--wf-rapide, 160ms);
 }
 
-.wf-notes-ouvrir .sectionTitle {
-    margin: 0;
+.wf-notes-ouvrir:hover {
+    border-color: rgba(199, 52, 65, 0.55);
 }
 
-.wf-notes-resume {
-    color: var(--wf-acier, #A7B0BA);
-    font-style: italic;
-    font-size: 0.9em;
+.wf-notes-icone {
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-notes-titre {
+    font-family: var(--wf-titre, serif);
+    font-size: 1.2rem;
+}
+
+.wf-notes-moyenne {
+    padding: 0.05em 0.5em;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    font-weight: 700;
+    font-size: 0.95em;
+}
+
+.wf-notes-rang {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2em;
+    padding: 0.05em 0.6em;
+    border-radius: 999px;
+    border: 1px solid rgba(167, 176, 186, 0.4);
+    font-weight: 700;
+    font-size: 0.95em;
+}
+
+.wf-notes-rang small,
+.wf-stat-valeur small {
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+.wf-notes-rang .material-icons {
+    font-size: 1.1em;
+}
+
+.wf-podium-1 {
+    color: #F4D35E;
+    border-color: rgba(244, 211, 94, 0.6);
+    box-shadow: 0 0 12px rgba(244, 211, 94, 0.2);
+}
+
+.wf-podium-2 {
+    color: #D5DBE1;
+    border-color: rgba(213, 219, 225, 0.6);
+}
+
+.wf-podium-3 {
+    color: #D08A4E;
+    border-color: rgba(208, 138, 78, 0.6);
 }
 
 .wf-notes-chevron {
@@ -204,31 +265,55 @@
     animation: wf-montee 0.35s var(--wf-courbe, ease) both;
 }
 
-.wf-notes-outils {
+/* Comparaison avec tes autres séries */
+.wf-notes-comparaison {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1em;
     flex-wrap: wrap;
-    margin-bottom: 0.8em;
+    gap: 0.6em;
+    margin-bottom: 0.9em;
 }
 
-.wf-notes-legende {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35em;
+.wf-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1em;
+    min-width: 9em;
+    padding: 0.5em 0.8em;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(167, 176, 186, 0.18);
+    border-radius: 4px;
+    color: inherit;
+    text-decoration: none;
+}
+
+a.wf-stat:hover {
+    border-color: rgba(199, 52, 65, 0.55);
+}
+
+.wf-stat-valeur {
+    font-family: var(--wf-titre, serif);
+    font-size: 1.25rem;
+}
+
+.wf-stat-libelle {
     color: var(--wf-acier, #A7B0BA);
-    font-size: 0.82em;
+    font-size: 0.8em;
 }
 
-.wf-notes-legende i {
-    display: inline-block;
-    width: 0.9em;
-    height: 0.9em;
-    margin-left: 0.5em;
-    border-radius: 2px;
+.wf-stat-rang .wf-stat-valeur {
+    color: var(--wf-sang-vif, #C73441);
+    font-size: 1.5rem;
 }
 
+.wf-stat-ecart.wf-plus .wf-stat-valeur {
+    color: #7FD38A;
+}
+
+.wf-stat-ecart.wf-moins .wf-stat-valeur {
+    color: #E0806F;
+}
+
+/* Tableau */
 .wf-notes-defile {
     overflow-x: auto;
     padding-bottom: 0.4em;
@@ -248,9 +333,11 @@
     font-size: 0.85em;
 }
 
-.wf-notes-table thead th {
+.wf-notes-table tbody th {
     position: sticky;
-    top: 0;
+    left: 0;
+    z-index: 1;
+    background: var(--wf-noir, #0A0A0C);
 }
 
 .wf-notes-table td {
@@ -258,9 +345,10 @@
     height: 1.9em;
     padding: 0;
     text-align: center;
-    border-radius: 2px;
+    border: 1px solid transparent;
+    border-radius: 4px;
     font-size: 0.85em;
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .wf-notes-table td a {
@@ -270,186 +358,225 @@
     text-decoration: none;
 }
 
-.wf-note-vide {
-    background: transparent;
-}
-
 .wf-note-sans {
     background: rgba(255, 255, 255, 0.03);
     color: var(--wf-acier, #A7B0BA);
 }
 
-.wf-note-5 {
-    background: #C73441;
-    color: #FFF;
-    box-shadow: 0 0 10px rgba(199, 52, 65, 0.45);
-}
-
-.wf-note-4 {
-    background: #94202B;
-    color: #F7ECEC;
-}
-
-.wf-note-3 {
-    background: #5E1821;
-    color: #EADADC;
-}
-
-.wf-note-2 {
-    background: #372A2F;
-    color: #D5DBE1;
-}
-
-.wf-note-1 {
-    background: #23262C;
-    color: #A7B0BA;
-}
-
-.wf-notes-legende i.wf-note-5,
-.wf-notes-legende i.wf-note-4,
-.wf-notes-legende i.wf-note-3,
-.wf-notes-legende i.wf-note-2,
-.wf-notes-legende i.wf-note-1 {
-    box-shadow: none;
-}
-
 .wf-notes-table td.wf-note {
-    transition: transform var(--wf-rapide, 160ms), filter 0.4s;
+    transition: transform var(--wf-rapide, 160ms);
 }
 
 @media (hover: hover) {
     .wf-notes-table td.wf-note:hover {
         transform: scale(1.12);
         position: relative;
-        z-index: 1;
+        z-index: 2;
     }
 }
 
 .wf-note-moyennes td {
-    border-top: 2px solid rgba(10, 10, 12, 1);
     font-style: italic;
+    outline: 1px solid rgba(10, 10, 12, 1);
 }
 
-/* Anti-spoil : notes des épisodes non vus masquées */
-.wf-note-cachee {
-    background: repeating-linear-gradient(45deg, #1A1A1F 0 6px, #202027 6px 12px) !important;
-    color: transparent !important;
-    box-shadow: none !important;
-    cursor: pointer;
+.wf-note-moyennes th {
+    padding-top: 0.5em !important;
 }
 
-.wf-note-cachee a {
-    pointer-events: none;
-}
-
-.wf-note-cachee::after {
-    content: "?";
+.wf-notes-legende {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8em;
+    margin-top: 0.6em;
     color: var(--wf-acier, #A7B0BA);
-    line-height: 1.9em;
+    font-size: 0.8em;
 }
 
-.wf-note-cachee {
-    position: relative;
+.wf-notes-legende span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
 }
 
-.wf-note-cachee::after {
-    position: absolute;
-    inset: 0;
-}
-
-.wf-notes-revelees .wf-note-cachee,
-.wf-note-cachee.wf-devoilee {
-    color: inherit;
-}
-
-.wf-notes-revelees .wf-note-cachee::after,
-.wf-note-cachee.wf-devoilee::after {
-    content: none;
-}
-
-.wf-notes-revelees .wf-note-cachee a,
-.wf-note-cachee.wf-devoilee a {
-    pointer-events: auto;
-}
-
-.wf-notes-revelees .wf-note-cachee.wf-note-5,
-.wf-note-cachee.wf-devoilee.wf-note-5 { background: #C73441 !important; color: #FFF !important; }
-
-.wf-notes-revelees .wf-note-cachee.wf-note-4,
-.wf-note-cachee.wf-devoilee.wf-note-4 { background: #94202B !important; color: #F7ECEC !important; }
-
-.wf-notes-revelees .wf-note-cachee.wf-note-3,
-.wf-note-cachee.wf-devoilee.wf-note-3 { background: #5E1821 !important; color: #EADADC !important; }
-
-.wf-notes-revelees .wf-note-cachee.wf-note-2,
-.wf-note-cachee.wf-devoilee.wf-note-2 { background: #372A2F !important; color: #D5DBE1 !important; }
-
-.wf-notes-revelees .wf-note-cachee.wf-note-1,
-.wf-note-cachee.wf-devoilee.wf-note-1 { background: #23262C !important; color: #A7B0BA !important; }
-
-.wf-note-cachee.wf-devoilee {
-    animation: wf-devoile 0.4s ease;
-}
-
-@keyframes wf-devoile {
-    from {
-        filter: blur(4px);
-    }
+.wf-notes-legende i {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 1px solid transparent;
+    border-radius: 3px;
 }
 
 .wf-notes-source {
     margin: 0.6em 0 0;
     color: var(--wf-acier, #A7B0BA);
-    font-size: 0.8em;
+    font-size: 0.78em;
     font-style: italic;
 }
 
-/* Interrupteur */
-.wf-interrupteur {
+/* ---------- Saison : films liés ---------- */
+.wf-btn-lier {
     display: inline-flex;
     align-items: center;
-    gap: 0.6em;
-    cursor: pointer;
-    font-size: 0.9em;
-}
-
-.wf-interrupteur input {
-    position: absolute;
-    opacity: 0;
-    width: 1px;
-    height: 1px;
-}
-
-.wf-interrupteur span {
-    position: relative;
-    width: 2.4em;
-    height: 1.3em;
+    gap: 0.4em;
+    height: 2.9em;
+    margin: 0 0.4em;
+    padding: 0 1em;
     border-radius: 999px;
-    background: #23232A;
-    border: 1px solid rgba(167, 176, 186, 0.4);
-    transition: background var(--wf-rapide, 160ms);
+    border: 1px dashed rgba(167, 176, 186, 0.5);
+    background: rgba(14, 14, 17, 0.85);
+    color: var(--wf-acier-clair, #D5DBE1);
+    font-family: var(--wf-titre, serif);
+    font-size: 0.95rem;
+    transition: border-color var(--wf-rapide, 160ms), color var(--wf-rapide, 160ms);
 }
 
-.wf-interrupteur span::after {
-    content: "";
-    position: absolute;
-    top: 0.12em;
-    left: 0.15em;
-    width: 0.95em;
-    height: 0.95em;
-    border-radius: 50%;
-    background: var(--wf-acier-clair, #D5DBE1);
-    transition: transform var(--wf-rapide, 160ms) var(--wf-courbe, ease);
-}
-
-.wf-interrupteur input:checked + span {
-    background: #A3232E;
+.wf-btn-lier:hover {
     border-color: #C73441;
+    color: #FFF;
 }
 
-.wf-interrupteur input:checked + span::after {
-    transform: translateX(1.05em);
-    background: #FFF;
+.wf-btn-lier .material-icons {
+    color: var(--wf-sang-vif, #C73441);
+}
+
+@media (max-width: 600px) {
+    .wf-btn-lier-texte {
+        display: none;
+    }
+}
+
+.wf-film-lie {
+    position: relative;
+    display: flex;
+    gap: 1em;
+    align-items: center;
+    margin: 0.4em 0;
+    padding: 0.6em 0.8em;
+    color: inherit;
+    text-decoration: none;
+    background: linear-gradient(90deg, rgba(163, 35, 46, 0.18), rgba(20, 20, 24, 0.5) 60%);
+    border: 1px solid rgba(199, 52, 65, 0.45);
+    border-radius: 4px;
+    transition: transform var(--wf-normal, 320ms) var(--wf-courbe, ease), border-color var(--wf-rapide, 160ms);
+}
+
+.wf-film-lie:hover {
+    border-color: #C73441;
+    transform: translateX(4px);
+}
+
+.wf-film-lie-affiche {
+    flex: 0 0 auto;
+    width: 60px;
+    aspect-ratio: 2 / 3;
+    border-radius: 3px;
+    background: #17171C center / cover no-repeat;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.wf-film-lie-texte {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+    min-width: 0;
+}
+
+.wf-film-lie-etiquette {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    color: var(--wf-sang-vif, #C73441);
+    font-family: var(--wf-titre, serif);
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.wf-film-lie-etiquette .material-icons {
+    font-size: 1.1em;
+}
+
+.wf-film-lie-titre {
+    font-family: var(--wf-titre, serif);
+    font-size: 1.15rem;
+}
+
+.wf-film-lie-resume {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+.wf-film-lie-vu {
+    position: absolute;
+    right: 0.6em;
+    top: 50%;
+    width: 3em;
+    height: 3em;
+    transform: translateY(-50%) rotate(-10deg);
+    background: url("../assets/img/sceau-vu.webp") center / contain no-repeat;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6));
+}
+
+.wf-lier-position {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    margin-top: 0.8em;
+    color: var(--wf-acier-clair, #D5DBE1);
+}
+
+.wf-lier-position select {
+    flex: 1;
+    min-width: 0;
+}
+
+.wf-resultat.wf-choisi {
+    border-color: #C73441;
+    background: rgba(163, 35, 46, 0.2);
+}
+
+.wf-resultat .check_circle {
+    color: transparent;
+}
+
+.wf-resultat.wf-choisi .check_circle {
+    color: #C73441;
+}
+
+.wf-lier-existants {
+    max-height: 26vh;
+    min-height: 0;
+}
+
+/* ---------- Séries sans fichier, collections hors bibliothèque ---------- */
+.card.wf-serie-vide,
+.card.wf-hors-bibliotheque {
+    display: none !important;
+}
+
+/* ---------- Bibliothèques : pas de menu déroulant sur le titre ---------- */
+.MuiButton-root[aria-controls="library-view-menu"] {
+    pointer-events: none;
+    cursor: default !important;
+}
+
+.MuiButton-root[aria-controls="library-view-menu"] .MuiButton-endIcon {
+    display: none;
+}
+
+#library-view-menu {
+    display: none !important;
+}
+
+/* Les éléments WolfFlix masqués le restent */
+[class^="wf-"][hidden],
+[class*=" wf-"][hidden] {
+    display: none !important;
 }
 
 @keyframes wf-montee {

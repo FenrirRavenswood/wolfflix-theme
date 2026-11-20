@@ -322,8 +322,12 @@
                     }
                 });
                 if (conteneur.querySelector('.wf-section')) return;
-                var reprise = conteneur.querySelector('.itemsContainer[data-monitor*="videoplayback"]');
-                var section = reprise && reprise.closest('.verticalSection');
+                // « Continuer de regarder » (et pas « À suivre », qui a le même marqueur)
+                var section = null;
+                conteneur.querySelectorAll('.itemsContainer[data-monitor*="videoplayback"]').forEach(function (r) {
+                    var sec = r.closest('.verticalSection');
+                    if (!section && sec && !sec.querySelector('a[href*="nextup"]')) section = sec;
+                });
                 var repere = section || conteneur.querySelector('.section0');
                 if (morceaux.avant) {
                     if (repere) repere.insertAdjacentHTML('afterend', morceaux.avant);
@@ -385,7 +389,14 @@
             '<div class="wf-page-grille padded-left padded-right">' + loupAttente() + '</div>' +
             '<div class="wf-pagination wf-pagination-bas padded-left padded-right"></div>';
         el.querySelector('.wf-tri').value = tri;
-        el.querySelector('.wf-creer').addEventListener('click', function () { creer(type); });
+        var creerBtn = el.querySelector('.wf-creer');
+        creerBtn.hidden = true;
+        creerBtn.addEventListener('click', function () { creer(type); });
+        // Bouton réservé aux administrateurs
+        api().getCurrentUser().then(function (u) {
+            if (u && u.Policy && u.Policy.IsAdministrator) creerBtn.hidden = false;
+            else creerBtn.remove();
+        }).catch(function () { creerBtn.remove(); });
 
         charger().then(function (cols) {
             if (el.getAttribute('data-type') !== type || !el.isConnected) return;
@@ -523,6 +534,22 @@
             section.classList.add('wf-remplacee');
             images(section.parentNode);
         }).catch(function () { section.classList.remove('wf-favoris-collections'); });
+    }
+
+    /* ---------- Bibliothèques : Films = sagas seulement, Séries = cycles seulement ---------- */
+    function bibliotheques() {
+        var h = location.hash || '';
+        var garder = /^#\/movies/.test(h) ? 's' : /^#\/tv/.test(h) ? 'c' : null;
+        if (!garder) return;
+        var cache = lireCache();
+        var inconnus = false;
+        document.querySelectorAll('.card[data-type="BoxSet"][data-id]:not(.wf-trie)').forEach(function (c) {
+            var e = cache[c.getAttribute('data-id')];
+            if (!e) { inconnus = true; return; }
+            c.classList.add('wf-trie');
+            if (e.t !== garder) c.classList.add('wf-hors-bibliotheque');
+        });
+        if (inconnus && !etat.promesse) charger().then(passer).catch(function () { /* rien */ });
     }
 
     /* ---------- Fiches ---------- */
@@ -853,6 +880,7 @@
             accueil();
             fiche();
             favoris();
+            bibliotheques();
         });
     }
     window.addEventListener('wf-route', passer);
