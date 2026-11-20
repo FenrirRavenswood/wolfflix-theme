@@ -63,10 +63,21 @@
             })
             .map(function (v) { return { cle: v.key, langue: v.iso_639_1 === 'fr' ? 'VF' : 'VO', nom: v.name }; });
     }
-    function videos(chemin) {
-        return tmdb(chemin, { language: 'fr-FR', include_video_language: 'fr,en' })
-            .then(function (r) { return candidats(r.results); })
+    function videos(chemin, portee) {
+        return tmdb(chemin, { language: 'fr-FR', include_video_language: 'fr,en,null' })
+            .then(function (r) {
+                return candidats(r.results).map(function (v) { v.portee = portee; return v; });
+            })
             .catch(function () { return []; });
+    }
+    /* Toujours la VF d'abord (jusqu'à 10 vidéos), la VO seulement ensuite, en secours */
+    function vfDabord(listes) {
+        var tout = [].concat.apply([], listes);
+        var vus = {};
+        tout = tout.filter(function (v) { if (vus[v.cle]) return false; vus[v.cle] = true; return true; });
+        var vf = tout.filter(function (v) { return v.langue === 'VF'; }).slice(0, 10);
+        var vo = tout.filter(function (v) { return v.langue === 'VO'; }).slice(0, 5);
+        return vf.concat(vo);
     }
 
     function parExterne(id, source, champ, type) {
@@ -95,24 +106,22 @@
         var a = api();
         var p;
         if (item.Type === 'Movie') {
-            p = idTmdb(item).then(function (c) { return c ? videos('movie/' + c.id + '/videos') : []; });
+            p = idTmdb(item).then(function (c) { return c ? videos('movie/' + c.id + '/videos', 'film').then(function (l) { return vfDabord([l]); }) : []; });
         } else if (item.Type === 'Series' || item.Type === 'Season' || item.Type === 'Episode') {
             var saison = item.Type === 'Series' ? 1 : item.Type === 'Season' ? item.IndexNumber : item.ParentIndexNumber;
             var serie = item.Type === 'Series' ? Promise.resolve(item) : a.getItem(a.getCurrentUserId(), item.SeriesId);
             p = serie.then(idTmdb).then(function (c) {
                 if (!c) return [];
-                var parSaison = saison > 0 ? videos('tv/' + c.id + '/season/' + saison + '/videos') : Promise.resolve([]);
-                return parSaison.then(function (l) {
-                    return videos('tv/' + c.id + '/videos').then(function (g) {
-                        var vus = {};
-                        return l.concat(g).filter(function (v) { if (vus[v.cle]) return false; vus[v.cle] = true; return true; });
-                    });
+                var parSaison = saison > 0 ? videos('tv/' + c.id + '/season/' + saison + '/videos', 'saison') : Promise.resolve([]);
+                return Promise.all([parSaison, videos('tv/' + c.id + '/videos', 'serie')]).then(function (r) {
+                    // Ordre : VF de la saison, VF de la série, puis VO de la saison, VO de la série
+                    return vfDabord([r[0], r[1]]);
                 });
             });
         } else {
             p = Promise.resolve([]);
         }
-        trouvees[item.Id] = p.then(function (l) { return l.slice(0, 10); }).catch(function () {
+        trouvees[item.Id] = p.then(function (l) { return l.slice(0, 15); }).catch(function () {
             delete trouvees[item.Id];
             return [];
         });
@@ -169,7 +178,8 @@
         function charger() {
             if (index >= liste.length) { echec(); return; }
             var v = liste[index];
-            surtitre.textContent = 'Bande-annonce · ' + v.langue + (liste.length > 1 ? ' · ' + (index + 1) + '/' + liste.length : '');
+            surtitre.textContent = 'Bande-annonce · ' + v.langue + (v.portee === 'saison' ? ' · saison' : v.portee === 'serie' ? ' · série' : '') +
+                (liste.length > 1 ? ' · ' + (index + 1) + '/' + liste.length : '');
             liens.innerHTML = (index + 1 < liste.length ? '<button type="button" class="wf-ba-autre"><span class="material-icons skip_next" aria-hidden="true"></span> Autre vidéo</button>' : '') +
                 '<a class="wf-ba-youtube" href="https://www.youtube.com/watch?v=' + encodeURIComponent(v.cle) + '" target="_blank" rel="noopener">' +
                 '<span class="material-icons open_in_new" aria-hidden="true"></span> YouTube</a>';
@@ -243,12 +253,14 @@
                 b.type = 'button';
                 b.className = 'wf-btn-ba';
                 b.setAttribute('data-id', id);
-                var etiquette = item.Type === 'Series' ? 'Saison 1' : (item.Type === 'Season' || item.Type === 'Episode') ? 'Saison ' + (item.IndexNumber && item.Type === 'Season' ? item.IndexNumber : item.ParentIndexNumber) : '';
+                var numSaison = item.Type === 'Series' ? 1 : item.Type === 'Season' ? item.IndexNumber : item.ParentIndexNumber;
+                var etiquette = liste[0].portee === 'saison' ? 'Saison ' + numSaison : liste[0].portee === 'serie' ? 'Série' : '';
                 b.title = 'Bande-annonce' + (etiquette ? ' — ' + etiquette : '') + ' (' + liste[0].langue + ')';
                 b.innerHTML = '<span class="wf-btn-ba-icone"><span class="material-icons play_arrow" aria-hidden="true"></span></span>' +
                     '<span class="wf-btn-ba-texte">Bande-annonce' + (etiquette ? ' <small>' + etiquette + '</small>' : '') + '</span>' +
                     '<span class="wf-btn-ba-langue">' + liste[0].langue + '</span>';
-                var nom = item.Type === 'Season' || item.Type === 'Episode' ? (item.SeriesName || item.Name) + ' — ' + etiquette : item.Type === 'Series' ? item.Name + ' — Saison 1' : item.Name;
+                var nomSerie = item.Type === 'Series' ? item.Name : (item.SeriesName || item.Name);
+                var nom = item.Type === 'Movie' ? item.Name : nomSerie + (etiquette ? ' — ' + etiquette : '');
                 b.addEventListener('click', function () { ouvrir(liste, nom); });
                 var lecture = p.querySelector('.btnPlay:not(.hide), .btnResume:not(.hide)');
                 if (lecture && lecture.nextSibling) p.insertBefore(b, lecture.nextSibling);

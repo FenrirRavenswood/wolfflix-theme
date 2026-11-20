@@ -7,6 +7,7 @@
    - Signet de sang sur les affiches en favori
    - « Vu » coché : remet la lecture à zéro et retire la carte de « Continuer »
    - Liens « Sagas » et « Cycles » dans la barre du haut
+   - « À suivre » sans limite de temps
    - Charge les modules Sagas & Cycles, Bandes-annonces et Séries
    - Traînée d'empreintes derrière le curseur (ordinateur uniquement)
    - Inclinaison des affiches vers la souris (ordinateur uniquement)
@@ -18,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v1.1.0';
+    var VERSION = 'v1.2.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -225,6 +226,18 @@
         }, 500);
     }
 
+    /* ---------- 3d bis. « À suivre » sans limite de temps ----------
+       Jellyfin retire une série de « À suivre » après 365 jours sans visionnage
+       (réglage local à chaque navigateur). On le pousse à 100 ans. */
+    function aSuivreSansLimite() {
+        var a = api();
+        if (!a) return;
+        try {
+            var cle = a.getCurrentUserId() + '-maxDaysForNextUp';
+            if (localStorage.getItem(cle) !== '36500') localStorage.setItem(cle, '36500');
+        } catch (e) { /* stockage indisponible */ }
+    }
+
     /* ---------- 3e. Module Sagas & Cycles ---------- */
     function chargerModules() {
         window.WolfFlix = { VERSION: VERSION, BASE: BASE };
@@ -395,7 +408,8 @@
         traineeEmpreintes();
         inclinaison();
         document.addEventListener('click', surClic, true);
-        window.addEventListener('wf-route', function () { chargerFavoris(false); });
+        window.addEventListener('wf-route', function () { chargerFavoris(false); aSuivreSansLimite(); });
+        aSuivreSansLimite();
         chargerModules();
     }
 

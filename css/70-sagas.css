@@ -783,3 +783,162 @@ html.wf-modale-ouverte body {
 .wf-btn[hidden] {
     display: none !important;
 }
+
+/* ---------- v1.2 : saisons custom, saisons entières, épisodes ---------- */
+.wf-groupe-separateur {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4em;
+    width: 2.6em;
+    margin: 0 0.4em 2.6em;
+    padding: 0.6em 0;
+    border-left: 2px solid #A3232E;
+    background: linear-gradient(180deg, rgba(163, 35, 46, 0.22), rgba(163, 35, 46, 0.04));
+    border-radius: 0 4px 4px 0;
+}
+
+.wf-groupe-libelle,
+.wf-groupe-nom {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+}
+
+.wf-groupe-libelle {
+    font-size: 0.7em;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-groupe-nom {
+    font-family: var(--wf-titre, serif);
+    font-size: 1.05em;
+    max-height: 14em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wf-groupe-separateur.wf-groupe-fin {
+    width: 0;
+    margin: 0 0.6em 2.6em;
+    padding: 0;
+    border-left: 2px dashed rgba(167, 176, 186, 0.3);
+    background: none;
+}
+
+.wf-dans-groupe .cardScalable {
+    box-shadow: 0 0 0 1px rgba(163, 35, 46, 0.45);
+}
+
+/* Éditeur */
+.wf-editeur-boutons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+}
+
+.wf-editeur-ajout.wf-ouvert .wf-editeur-boutons .wf-editeur-plus {
+    display: none;
+}
+
+.wf-editeur-ajout.wf-ouvert .wf-champ {
+    margin-top: 0.6em;
+}
+
+.wf-editeur-ajout .wf-editeur-plus {
+    display: inline-flex;
+}
+
+.wf-ligne-groupe {
+    background: linear-gradient(90deg, rgba(163, 35, 46, 0.28), rgba(163, 35, 46, 0.06)) !important;
+    border-color: rgba(199, 52, 65, 0.55) !important;
+}
+
+.wf-ligne-groupe.wf-ligne-groupe-fin {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-style: dashed !important;
+    border-color: rgba(167, 176, 186, 0.3) !important;
+}
+
+.wf-groupe-icone {
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-groupe-champ {
+    flex: 1;
+    min-width: 0;
+    padding: 0.3em 0.5em;
+    background: rgba(10, 10, 12, 0.6);
+    border: 1px solid rgba(167, 176, 186, 0.3);
+    border-radius: 3px;
+    color: var(--wf-texte, #E9E6E1);
+    font-family: var(--wf-titre, serif);
+    font-size: 1rem;
+}
+
+.wf-groupe-champ:focus {
+    outline: 0;
+    border-color: #C73441;
+}
+
+.wf-ligne-dans-groupe {
+    margin-left: 1.4em !important;
+    border-left: 2px solid rgba(199, 52, 65, 0.6) !important;
+}
+
+.wf-resultat-serie,
+.wf-resultat-saison {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0.3em;
+}
+
+.wf-sous-resultats {
+    display: flex;
+    flex-direction: column;
+    margin: 0.2em 0 0.4em 1.4em;
+    padding-left: 0.6em;
+    border-left: 1px solid rgba(167, 176, 186, 0.25);
+}
+
+.wf-sous-resultats[hidden] {
+    display: none !important;
+}
+
+.wf-lien-mini {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2em;
+    margin: 0.1em 0 0.1em 3em;
+    padding: 0.15em 0.4em;
+    background: transparent;
+    border: 0;
+    border-radius: 3px;
+    color: var(--wf-acier-clair, #D5DBE1);
+    font: inherit;
+    font-size: 0.85em;
+}
+
+.wf-lien-mini:hover {
+    color: #FFF;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.wf-lien-mini .material-icons {
+    font-size: 1.15em;
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-resultat.wf-ajoute {
+    opacity: 0.45;
+}
+
+/* Rangée « Cycles » en tête de la bibliothèque Séries */
+.wf-section-bib-cycles {
+    margin-bottom: 1em;
+}

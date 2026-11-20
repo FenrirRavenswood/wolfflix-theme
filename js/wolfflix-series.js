@@ -604,9 +604,114 @@
         });
     }
 
+    /* ---------- Lecture : enchaîner épisode → film lié → épisode suivant ----------
+       Le script suit ce que joue CET appareil (API « Sessions ») ; quand l'épisode
+       qui précède un film lié se termine, il demande au lecteur de jouer le film ;
+       quand le film lié se termine, il relance la série à l'épisode d'après. */
+    var lect = { dernier: null, pos: 0, duree: 0, session: null, minuterie: null, deja: {}, filmLie: null };
+
+    function surveillerLecture() {
+        var enLecture = /^#\/video/.test(location.hash || '') || !!document.querySelector('video.htmlvideoplayer');
+        if (enLecture && !lect.minuterie) {
+            lect.minuterie = setInterval(sonder, 4000);
+            sonder();
+        } else if (!enLecture && lect.minuterie) {
+            clearInterval(lect.minuterie);
+            lect.minuterie = null;
+            setTimeout(sonder, 1500);
+        }
+    }
+    function sonder() {
+        var a = api();
+        if (!a || !a.deviceId) return;
+        json('Sessions', { DeviceId: a.deviceId() }).then(function (l) {
+            var s = (l || [])[0];
+            if (!s) return;
+            lect.session = s.Id;
+            var npi = s.NowPlayingItem || null;
+            if (lect.dernier && (!npi || npi.Id !== lect.dernier.Id)) {
+                transition(lect.dernier, npi, lect.pos, lect.duree, false);
+            }
+            if (npi) {
+                lect.dernier = npi;
+                lect.pos = (s.PlayState && s.PlayState.PositionTicks) || 0;
+                lect.duree = npi.RunTimeTicks || 0;
+            } else {
+                lect.dernier = null;
+            }
+        }).catch(function () { /* rien */ });
+    }
+    document.addEventListener('ended', function (e) {
+        if (!e.target || e.target.tagName !== 'VIDEO' || !lect.dernier) return;
+        var d = lect.dernier;
+        lect.dernier = null;
+        transition(d, null, lect.duree, lect.duree, true);
+    }, true);
+
+    function jouer(ids, message) {
+        var a = api();
+        var session = lect.session ? Promise.resolve(lect.session) :
+            json('Sessions', { DeviceId: a.deviceId() }).then(function (l) { return l && l[0] && l[0].Id; });
+        return session.then(function (sid) {
+            if (!sid) return;
+            toast(message);
+            return a.ajax({ type: 'POST', url: url('Sessions/' + sid + '/Playing', { playCommand: 'PlayNow', itemIds: ids.join(',') }) });
+        }).catch(function () { toast('Lancement automatique impossible', true); });
+    }
+    function lienDuFilm(filmId) {
+        return json('Users/' + uid() + '/Items', {
+            IncludeItemTypes: 'Series', Recursive: true, Tags: 'wf-films', Fields: 'Tags', EnableImages: false
+        }).then(function (r) {
+            var t = null;
+            (r.Items || []).forEach(function (s) {
+                liensDe(s).forEach(function (l) { if (!t && l.film === filmId) t = { film: filmId, serie: s.Id, lien: l }; });
+            });
+            return t;
+        });
+    }
+    function transition(prec, suiv, pos, duree, fini) {
+        var finiVraiment = fini || (duree > 0 && pos / duree > 0.85);
+        if (prec.Type === 'Episode' && prec.SeriesId) {
+            var enchaine = finiVraiment || (suiv && suiv.SeriesId === prec.SeriesId);
+            if (!enchaine) return;
+            oublier(['item-' + prec.SeriesId]);
+            element(prec.SeriesId).then(function (serie) {
+                var l = liensDe(serie).filter(function (x) { return x.saison === prec.ParentIndexNumber && x.apres === prec.IndexNumber; })[0];
+                if (!l) return;
+                if (lect.deja[l.film] && Date.now() - lect.deja[l.film] < 600000) return;
+                return json('Users/' + uid() + '/Items', { Ids: l.film, EnableImages: false }).then(function (r) {
+                    var f = r.Items && r.Items[0];
+                    if (!f || (f.UserData && f.UserData.Played)) return;
+                    lect.deja[l.film] = Date.now();
+                    lect.filmLie = { film: l.film, serie: serie.Id, lien: l };
+                    return jouer([l.film], 'Film lié : ' + f.Name);
+                });
+            }).catch(function () { /* rien */ });
+        } else if (prec.Type === 'Movie' && finiVraiment) {
+            var ctx = lect.filmLie && lect.filmLie.film === prec.Id ? Promise.resolve(lect.filmLie) : lienDuFilm(prec.Id);
+            ctx.then(function (c) {
+                if (!c) return;
+                lect.filmLie = null;
+                if (lect.deja['apres-' + c.film] && Date.now() - lect.deja['apres-' + c.film] < 600000) return;
+                oublier(['episodes-' + c.serie]);
+                return episodes(c.serie).then(function (eps) {
+                    var suite = eps.filter(function (e) {
+                        return e.ParentIndexNumber > c.lien.saison || (e.ParentIndexNumber === c.lien.saison && e.IndexNumber > c.lien.apres);
+                    }).filter(function (e) { return e.ParentIndexNumber > 0; })
+                        .sort(function (a, b) { return a.ParentIndexNumber - b.ParentIndexNumber || a.IndexNumber - b.IndexNumber; })
+                        .slice(0, 50);
+                    if (!suite.length) return;
+                    lect.deja['apres-' + c.film] = Date.now();
+                    return jouer(suite.map(function (e) { return e.Id; }), 'Reprise de la série : S' + suite[0].ParentIndexNumber + ' · É' + suite[0].IndexNumber);
+                });
+            }).catch(function () { /* rien */ });
+        }
+    }
+
     /* ---------- Orchestration ---------- */
     function passer() {
         if (!api()) return;
+        surveillerLecture();
         masquerVides();
         accueil();
         var m = /^#\/details\?(?:[^#]*&)?id=([0-9a-f]{32})/i.exec(location.hash || '');
