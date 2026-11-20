@@ -126,42 +126,51 @@
     }
 
     /* ---------- Statistiques de toutes tes séries (classement, séries vides) ---------- */
-    var CLE_STATS = 'wf-stats-series-v1-';
+    var CLE_STATS = 'wf-stats-series-v2-';
     function stats() {
         return une('stats', function () {
             var c = null;
-            try { c = JSON.parse(localStorage.getItem(CLE_STATS + uid())); } catch (e) { c = null; }
+            try {
+                c = JSON.parse(localStorage.getItem(CLE_STATS + uid()));
+                localStorage.removeItem('wf-stats-series-v1-' + uid());
+            } catch (e) { c = null; }
             if (c && Date.now() - c.t < 86400000) return Promise.resolve(c);
             var parSerie = {};
-            var LOT = 1500;
-            function lot(debut) {
-                return json('Users/' + uid() + '/Items', {
-                    IncludeItemTypes: 'Episode', Recursive: true, IsMissing: false,
-                    EnableImages: false, EnableUserData: false, StartIndex: debut, Limit: LOT
-                }).then(function (r) {
-                    (r.Items || []).forEach(function (e) {
-                        if (!e.SeriesId) return;
-                        var x = parSerie[e.SeriesId] = parSerie[e.SeriesId] || [0, 0, 0];
-                        x[2]++;
-                        if (e.CommunityRating > 0 && e.ParentIndexNumber > 0) { x[0] += e.CommunityRating; x[1]++; }
-                    });
-                    var total = r.TotalRecordCount || 0;
-                    if (debut + LOT < total) return lot(debut + LOT);
-                });
-            }
+            // Une seule requête, triée : pas de pagination instable qui « perdrait » des séries
             return Promise.all([
-                lot(0),
+                json('Users/' + uid() + '/Items', {
+                    IncludeItemTypes: 'Episode', Recursive: true, IsMissing: false,
+                    SortBy: 'SeriesSortName,ParentIndexNumber,IndexNumber,SortName',
+                    EnableImages: false, EnableUserData: false, EnableTotalRecordCount: false
+                }),
                 json('Users/' + uid() + '/Items', { IncludeItemTypes: 'Series', Recursive: true, EnableImages: false, EnableUserData: false })
             ]).then(function (r) {
-                var vides = (r[1].Items || []).filter(function (s) { return !parSerie[s.Id]; }).map(function (s) { return s.Id; });
-                var moy = {};
-                Object.keys(parSerie).forEach(function (id) {
-                    var x = parSerie[id];
-                    if (x[1] >= 3) moy[id] = [+(x[0] / x[1]).toFixed(3), x[1]];
+                (r[0].Items || []).forEach(function (e) {
+                    if (!e.SeriesId) return;
+                    var x = parSerie[e.SeriesId] = parSerie[e.SeriesId] || [0, 0, 0];
+                    x[2]++;
+                    if (e.CommunityRating > 0 && e.ParentIndexNumber > 0) { x[0] += e.CommunityRating; x[1]++; }
                 });
-                var res = { t: Date.now(), moy: moy, vides: vides };
-                try { localStorage.setItem(CLE_STATS + uid(), JSON.stringify(res)); } catch (e) { /* plein */ }
-                return res;
+                var toutes = r[1].Items || [];
+                var candidates = toutes.filter(function (s) { return !parSerie[s.Id]; }).map(function (s) { return s.Id; });
+                // Garde-fou : trop de séries « vides » = résultat douteux, on ne cache rien
+                if (candidates.length > Math.max(5, toutes.length * 0.2)) candidates = [];
+                // Vérification une par une avant de cacher quoi que ce soit
+                return Promise.all(candidates.map(function (id) {
+                    return json('Shows/' + id + '/Episodes', { UserId: uid(), IsMissing: false, Limit: 1, EnableImages: false, EnableUserData: false })
+                        .then(function (x) { return (x.Items || []).length ? null : id; })
+                        .catch(function () { return null; });
+                })).then(function (v) {
+                    var vides = v.filter(Boolean);
+                    var moy = {};
+                    Object.keys(parSerie).forEach(function (id) {
+                        var x = parSerie[id];
+                        if (x[1] >= 3) moy[id] = [+(x[0] / x[1]).toFixed(3), x[1]];
+                    });
+                    var res = { t: Date.now(), moy: moy, vides: vides };
+                    try { localStorage.setItem(CLE_STATS + uid(), JSON.stringify(res)); } catch (e) { /* plein */ }
+                    return res;
+                });
             });
         });
     }

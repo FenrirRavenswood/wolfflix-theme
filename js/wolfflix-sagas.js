@@ -716,23 +716,39 @@
                 if (!(enfants[k].UserData && enfants[k].UserData.Played)) { prochain = k; break; }
             }
             if (dernierVu === -1) prochain = -1;
-            var groupeCourant = '';
-            var cartes = enfants.map(function (e, k) {
+            // Les titres d'une même saison custom sont regroupés en une seule carte
+            var segments = [];
+            enfants.forEach(function (e, k) {
                 var g = groupes[e.Id] || '';
-                var sep = '';
-                if (g !== groupeCourant) {
-                    sep = g ? '<div class="wf-groupe-separateur" title="Saison custom"><span class="wf-groupe-libelle">Saison custom</span><span class="wf-groupe-nom">' + esc(g) + '</span></div>'
-                        : '<div class="wf-groupe-separateur wf-groupe-fin" aria-hidden="true"></div>';
-                    groupeCourant = g;
+                var dernier = segments[segments.length - 1];
+                if (g && dernier && dernier.groupe === g) dernier.items.push({ e: e, k: k });
+                else segments.push({ groupe: g, items: [{ e: e, k: k }] });
+            });
+            var cartes = segments.map(function (seg, n) {
+                if (!seg.groupe) {
+                    var e = seg.items[0].e;
+                    var k = seg.items[0].k;
+                    var pr = presentation(e);
+                    return carte({
+                        id: e.Id, nom: pr.nom, tag: pr.tag, imgId: pr.imgId,
+                        sous: pr.sous, rang: n + 1,
+                        vu: !!(e.UserData && e.UserData.Played),
+                        ruban: k === prochain ? 'À suivre' : '',
+                        classe: k === prochain ? 'wf-prochain' : ''
+                    });
                 }
-                var pr = presentation(e);
-                return sep + carte({
-                    id: e.Id, nom: pr.nom, tag: pr.tag, imgId: pr.imgId,
-                    sous: pr.sous, rang: k + 1,
-                    vu: !!(e.UserData && e.UserData.Played),
-                    ruban: k === prochain ? 'À suivre' : '',
-                    classe: (k === prochain ? 'wf-prochain ' : '') + (g ? 'wf-dans-groupe' : '')
-                });
+                var total = seg.items.length;
+                var vus = seg.items.filter(function (x) { return x.e.UserData && x.e.UserData.Played; }).length;
+                var contientProchain = seg.items.some(function (x) { return x.k === prochain; });
+                var p0 = presentation(seg.items[0].e);
+                return carte({
+                    id: 'groupe-' + n, nom: seg.groupe, tag: p0.tag, imgId: p0.imgId,
+                    href: '#wf-groupe', rang: n + 1,
+                    sous: total + (total > 1 ? ' titres' : ' titre') + ' · ' + vus + '/' + total + ' vus',
+                    vu: vus === total,
+                    ruban: contientProchain ? 'À suivre' : 'Saison custom',
+                    classe: 'wf-carte-groupe' + (contientProchain ? ' wf-prochain' : '')
+                }).replace('class="card ', 'data-wf-groupe="' + n + '" class="card ');
             });
             bloc.innerHTML = '<div class="wf-ordre-entete padded-right">' +
                 '<h2 class="sectionTitle sectionTitle-cards">Ordre de visionnage' + (perso ? ' <span class="wf-pastille">personnalisé</span>' : '') + '</h2>' +
@@ -745,6 +761,13 @@
                     '<div class="cardContent wf-ajout-contenu"><span class="material-icons add"></span><span>Ajouter</span></div></div></div></button>' : '') +
                 '</div>';
             images(bloc);
+            bloc.querySelectorAll('[data-wf-groupe]').forEach(function (c) {
+                c.addEventListener('click', function (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    panneauGroupe(segments[+c.getAttribute('data-wf-groupe')], prochain, item);
+                }, true);
+            });
             var p = pageFiche();
             if (p) p.classList.add('wf-collection-ordonnee');
             var b = bloc.querySelector('.wf-ordre-modifier');
@@ -759,6 +782,53 @@
         }).catch(function () {
             bloc.remove();
         });
+    }
+
+    /* ---------- Panneau d'une saison custom (liste de ses titres, dans l'ordre) ---------- */
+    function panneauGroupe(seg, prochain, collection) {
+        if (!seg) return;
+        var total = seg.items.length;
+        var vus = seg.items.filter(function (x) { return x.e.UserData && x.e.UserData.Played; }).length;
+        var fond = document.createElement('div');
+        fond.className = 'wf-editeur-fond';
+        fond.innerHTML = '<div class="wf-editeur wf-groupe-panneau" role="dialog" aria-modal="true" aria-label="' + esc(seg.groupe) + '">' +
+            '<header><p class="wf-page-surtitre">' + esc(collection.Name) + ' · saison custom</p><h2>' + esc(seg.groupe) + '</h2>' +
+            '<div class="wf-groupe-progression"><span style="width:' + (total ? (vus / total * 100).toFixed(1) : 0) + '%"></span></div>' +
+            '<p class="wf-aide">' + vus + ' / ' + total + ' vus</p></header>' +
+            '<ol class="wf-groupe-liste">' + seg.items.map(function (x, i) {
+                var e = x.e;
+                var vu = !!(e.UserData && e.UserData.Played);
+                var tag = e.ImageTags && e.ImageTags.Primary;
+                var img = tag ? url('Items/' + e.Id + '/Images/Primary', { fillWidth: 320, quality: 90, tag: tag }) :
+                    (e.SeriesPrimaryImageTag ? image(e.SeriesId, e.SeriesPrimaryImageTag, 180) : '');
+                var pr = presentation(e);
+                var duree = e.RunTimeTicks ? Math.round(e.RunTimeTicks / 600000000) + ' min' : '';
+                return '<li class="' + (vu ? 'wf-vu-ligne' : '') + (x.k === prochain ? ' wf-prochain-ligne' : '') + '"><a href="' + esc(lienFiche(e.Id)) + '">' +
+                    '<span class="wf-groupe-num">' + (i + 1) + '</span>' +
+                    '<span class="wf-groupe-vignette"' + (img ? ' style="background-image:url(\'' + esc(img) + '\')"' : '') + '>' +
+                    (vu ? '<span class="wf-groupe-vu"></span>' : '') + '</span>' +
+                    '<span class="wf-groupe-texte"><span class="wf-groupe-titre">' + esc(pr.nom) + '</span>' +
+                    '<span class="wf-groupe-sous">' + esc([pr.sous, duree].filter(Boolean).join(' · ')) + '</span></span>' +
+                    (x.k === prochain ? '<span class="wf-pastille">À suivre</span>' : '') +
+                    '</a></li>';
+            }).join('') + '</ol>' +
+            '<footer><button type="button" class="wf-btn wf-btn-sec" data-act="fermer">Fermer</button></footer></div>';
+        document.body.appendChild(fond);
+        html.classList.add('wf-modale-ouverte');
+        function fermer() {
+            fond.remove();
+            html.classList.remove('wf-modale-ouverte');
+            document.removeEventListener('keydown', clavier, true);
+            window.removeEventListener('wf-route', fermer);
+        }
+        function clavier(e) { if (e.key === 'Escape') { e.stopPropagation(); fermer(); } }
+        document.addEventListener('keydown', clavier, true);
+        window.addEventListener('wf-route', fermer);
+        fond.addEventListener('click', function (e) {
+            if (e.target === fond || e.target.closest('[data-act="fermer"]')) fermer();
+        });
+        var p = fond.querySelector('.wf-prochain-ligne');
+        if (p) setTimeout(function () { p.scrollIntoView({ block: 'center' }); }, 50);
     }
 
     /* ---------- Éditeur d'ordre (films, séries, saisons entières, épisodes, saisons custom) ---------- */

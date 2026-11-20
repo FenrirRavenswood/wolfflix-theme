@@ -46,33 +46,95 @@
         });
     }
 
-    /* ---------- Recherche YouTube (optionnelle, clé API YouTube Data v3) ----------
-       Sert à trouver les bandes-annonces VF et par saison que TMDB n'a pas.
-       Chaque recherche coûte du quota (≈100 recherches/jour gratuites) : les
-       résultats sont gardés 30 jours dans le navigateur. */
+    /* ---------- Recherche sur YouTube ----------
+       Sans clé : on passe par Invidious (miroirs publics et libres de YouTube qui
+       offrent une recherche ouverte). La liste des miroirs en bonne santé est lue sur
+       api.invidious.io, et le script essaie le suivant si l'un ne répond pas.
+       Avec une clé YouTube Data v3 (facultative) : recherche officielle, plus fiable.
+       Les résultats sont gardés 30 jours dans le navigateur. */
+    var MIROIRS_SECOURS = ['https://inv.nadeko.net', 'https://invidious.nerdvpn.de', 'https://yewtu.be', 'https://invidious.privacyredirect.com'];
+
+    function avecDelai(u, ms, init) {
+        var ctrl = window.AbortController ? new AbortController() : null;
+        var t = setTimeout(function () { if (ctrl) ctrl.abort(); }, ms);
+        return fetch(u, Object.assign({ signal: ctrl ? ctrl.signal : undefined }, init || {})).then(function (r) {
+            clearTimeout(t);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        }, function (e) { clearTimeout(t); throw e; });
+    }
+
+    var miroirs = null;
+    function listeMiroirs() {
+        if (miroirs) return miroirs;
+        var cle = 'wf-invidious-miroirs';
+        try {
+            var c = JSON.parse(localStorage.getItem(cle));
+            if (c && Date.now() - c.t < 86400000 && c.l.length) { miroirs = Promise.resolve(c.l); return miroirs; }
+        } catch (e) { /* rien */ }
+        miroirs = avecDelai('https://api.invidious.io/instances.json?sort_by=health', 5000).then(function (l) {
+            var ok = (l || []).filter(function (x) {
+                var i = x[1] || {};
+                return i.type === 'https' && i.api === true && i.cors === true && i.uri;
+            }).map(function (x) { return x[1].uri.replace(/\/$/, ''); });
+            ok = ok.concat(MIROIRS_SECOURS.filter(function (m) { return ok.indexOf(m) === -1; })).slice(0, 8);
+            try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), l: ok })); } catch (e) { /* plein */ }
+            return ok;
+        }).catch(function () { return MIROIRS_SECOURS.slice(); });
+        return miroirs;
+    }
+
+    function rechercheInvidious(q) {
+        return listeMiroirs().then(function (l) {
+            var i = 0;
+            function essai() {
+                if (i >= l.length) return [];
+                var base = l[i++];
+                return avecDelai(base + '/api/v1/search?type=video&region=FR&q=' + encodeURIComponent(q), 4500).then(function (r) {
+                    if (!Array.isArray(r)) throw new Error('réponse inattendue');
+                    // Le miroir qui marche passe en tête pour la prochaine fois
+                    l.splice(l.indexOf(base), 1);
+                    l.unshift(base);
+                    try { localStorage.setItem('wf-invidious-miroirs', JSON.stringify({ t: Date.now(), l: l })); } catch (e) { /* plein */ }
+                    return r.filter(function (v) { return v.type === 'video' && v.videoId; })
+                        .map(function (v) { return { id: v.videoId, titre: v.title || '' }; });
+                }).catch(essai);
+            }
+            return essai();
+        });
+    }
+
+    function rechercheApiYoutube(q) {
+        var u = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=15' +
+            '&relevanceLanguage=fr&regionCode=FR&q=' + encodeURIComponent(q) + '&key=' + encodeURIComponent(cleYoutube);
+        return avecDelai(u, 6000, { referrerPolicy: 'strict-origin-when-cross-origin' }).then(function (r) {
+            return (r.items || []).map(function (it) {
+                return { id: it.id && it.id.videoId, titre: (it.snippet && it.snippet.title || '').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&quot;/g, '"') };
+            });
+        });
+    }
+
     function rechercheYoutube(q, saison) {
-        if (!cleYoutube) return Promise.resolve([]);
+        if (config.rechercheYoutube === false) return Promise.resolve([]);
         var cleCache = 'wf-yt-' + q.toLowerCase();
         try {
             var c = JSON.parse(localStorage.getItem(cleCache));
             if (c && Date.now() - c.t < 30 * 86400000) return Promise.resolve(c.l);
         } catch (e) { /* rien */ }
-        var u = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=15' +
-            '&relevanceLanguage=fr&regionCode=FR&q=' + encodeURIComponent(q) + '&key=' + encodeURIComponent(cleYoutube);
-        return fetch(u, { referrerPolicy: 'strict-origin-when-cross-origin' }).then(function (r) {
-            if (!r.ok) throw new Error('YouTube ' + r.status);
-            return r.json();
-        }).then(function (r) {
+        var source = cleYoutube ? rechercheApiYoutube(q).catch(function () { return rechercheInvidious(q); }) : rechercheInvidious(q);
+        return source.then(function (brut) {
             var exclus = /r[ée]action|react|review|critique|explained|expliqu|analyse|fan ?made|concept|parodie|recap|r[ée]sum[ée]|th[ée]orie|making|interview|clip|extrait|scene|sc[èe]ne|ending|fin expliqu/i;
-            var l = (r.items || []).map(function (it) {
-                var t = (it.snippet && it.snippet.title || '').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&quot;/g, '"');
+            var l = brut.map(function (v) {
+                var t = v.titre;
                 if (!/bande[- ]?annonce|trailer|teaser/i.test(t) || exclus.test(t)) return null;
                 var langue = /vostfr|vost\b|sous[- ]titr/i.test(t) ? 'VOSTFR' : /\bVF\b|version fran[çc]aise|fran[çc]ais|\bFR\b/i.test(t) ? 'VF' : null;
                 if (!langue) return null;
                 var bonneSaison = saison ? new RegExp('(saison|season|\\bS)\\s*0?' + saison + '\\b', 'i').test(t) : false;
-                return { cle: it.id && it.id.videoId, langue: langue, nom: t, portee: bonneSaison ? 'saison' : 'serie', yt: true };
+                return { cle: v.id, langue: langue, nom: t, portee: bonneSaison ? 'saison' : 'serie', yt: true };
             }).filter(function (v) { return v && v.cle; });
-            try { localStorage.setItem(cleCache, JSON.stringify({ t: Date.now(), l: l })); } catch (e) { /* plein */ }
+            if (brut.length) {
+                try { localStorage.setItem(cleCache, JSON.stringify({ t: Date.now(), l: l })); } catch (e) { /* plein */ }
+            }
             return l;
         }).catch(function () { return []; });
     }
@@ -144,7 +206,7 @@
             p = idTmdb(item).then(function (c) {
                 return c ? videos('movie/' + c.id + '/videos', 'film') : [];
             }).then(function (l) {
-                if (nbVf(l) >= 2 || !cleYoutube) return vfDabord([l]);
+                if (nbVf(l) >= 2) return vfDabord([l]);
                 var q = item.Name + (item.ProductionYear ? ' ' + item.ProductionYear : '') + ' bande annonce VF';
                 return rechercheYoutube(q, 0).then(function (y) {
                     y.forEach(function (v) { v.portee = 'film'; });
@@ -161,7 +223,7 @@
             }).then(function (r) {
                 if (!r) return [];
                 var tmdbSaisonVf = r[0].filter(function (v) { return v.langue === 'VF'; });
-                var besoinYt = cleYoutube && (tmdbSaisonVf.length === 0 || nbVf(r[0].concat(r[1])) < 2);
+                var besoinYt = tmdbSaisonVf.length === 0 || nbVf(r[0].concat(r[1])) < 2;
                 if (!besoinYt) return vfDabord([r[0], r[1]]);
                 return serie.then(function (se) {
                     var q = se.Name + (saison > 0 ? ' saison ' + saison : '') + ' bande annonce VF';

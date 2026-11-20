@@ -973,3 +973,123 @@ html.wf-modale-ouverte body {
 .wf-lien-mini[hidden] {
     display: none !important;
 }
+
+/* ---------- v1.3.2 : saison custom en une seule carte + panneau ---------- */
+.wf-carte-groupe .cardScalable {
+    /* Effet « pile » : deux affiches devinées derrière */
+    box-shadow: 0 0 0 1px rgba(199, 52, 65, 0.55), 6px -6px 0 -1px #24242B, 12px -12px 0 -2px #2E1418;
+}
+
+.wf-carte-groupe .wf-ruban {
+    background: linear-gradient(90deg, #3A1A1F, #7A1820);
+}
+
+.wf-carte-groupe.wf-prochain .wf-ruban {
+    background: linear-gradient(90deg, #7A1820, #C73441);
+}
+
+.wf-groupe-panneau {
+    width: min(720px, 100%);
+}
+
+.wf-groupe-progression {
+    height: 4px;
+    margin-top: 0.6em;
+    background: #1D1D23;
+    border: 1px solid rgba(167, 176, 186, 0.25);
+}
+
+.wf-groupe-progression span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #6E111A, #C73441);
+}
+
+.wf-groupe-liste {
+    list-style: none;
+    margin: 0;
+    padding: 0.4em 0.8em;
+    overflow-y: auto;
+    flex: 1 1 auto;
+}
+
+.wf-groupe-liste li a {
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+    margin: 0.3em 0;
+    padding: 0.45em 0.5em;
+    border: 1px solid rgba(167, 176, 186, 0.12);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color var(--wf-rapide, 160ms), background var(--wf-rapide, 160ms), transform var(--wf-rapide, 160ms);
+}
+
+.wf-groupe-liste li a:hover {
+    border-color: rgba(199, 52, 65, 0.6);
+    background: rgba(163, 35, 46, 0.1);
+    transform: translateX(3px);
+}
+
+.wf-groupe-liste li.wf-prochain-ligne a {
+    border-color: #C73441;
+    background: rgba(163, 35, 46, 0.16);
+}
+
+.wf-groupe-liste li.wf-vu-ligne a {
+    opacity: 0.7;
+}
+
+.wf-groupe-num {
+    min-width: 1.6em;
+    text-align: right;
+    font-family: var(--wf-titre, serif);
+    font-size: 1.2em;
+    color: var(--wf-sang-vif, #C73441);
+}
+
+.wf-groupe-vignette {
+    position: relative;
+    flex: 0 0 auto;
+    width: 112px;
+    aspect-ratio: 16 / 9;
+    border-radius: 3px;
+    background: #17171C center / cover no-repeat;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+
+.wf-groupe-vu {
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
+    width: 30px;
+    height: 30px;
+    transform: rotate(-10deg);
+    background: url("../assets/img/sceau-vu.webp") center / contain no-repeat;
+}
+
+.wf-groupe-texte {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.wf-groupe-titre {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wf-groupe-sous {
+    color: var(--wf-acier, #A7B0BA);
+    font-size: 0.85em;
+}
+
+@media (max-width: 600px) {
+    .wf-groupe-vignette {
+        width: 80px;
+    }
+}
