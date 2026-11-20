@@ -1,0 +1,237 @@
+/* =====================================================================
+   WolfFlix — Module 50 : Lecteur
+   Rail gothique, loup qui court en tête de la progression et du volume,
+   empreintes de sang et braises derrière lui, boutons, titre.
+   Remplace la barre Nyan Cat. CSS seul.
+   Cible : Jellyfin Web 12.4. Désactiver : commenter la ligne @import.
+   ===================================================================== */
+
+/* ---------- Bas du lecteur ---------- */
+.videoOsdBottom {
+    background: linear-gradient(0deg, rgba(5, 5, 6, 0.95) 0%, rgba(5, 5, 6, 0.6) 55%, rgba(5, 5, 6, 0)) !important;
+}
+
+.osdTitle,
+.osdMainTextContainer {
+    font-family: var(--wf-titre);
+    letter-spacing: 0.03em;
+}
+
+.osdTimeText,
+.osdTextContainer,
+.endsAtText {
+    font-variant-numeric: tabular-nums;
+    color: rgba(233, 230, 225, 0.8);
+}
+
+.videoOsdBottom .paper-icon-button-light,
+.videoOsdBottom button {
+    transition: color var(--wf-rapide, 160ms), transform var(--wf-rapide, 160ms);
+}
+
+.videoOsdBottom .paper-icon-button-light:hover,
+.videoOsdBottom button:hover {
+    color: #E5596A !important;
+    transform: scale(1.1);
+}
+
+.videoOsdBottom .btnPause {
+    border: 1px solid rgba(167, 176, 186, 0.4);
+    border-radius: 50%;
+}
+
+/* ---------- Rails : progression et volume ---------- */
+.videoOsdBottom .mdl-slider-background-flex {
+    height: 8px !important;
+    margin-top: -4px !important;
+    background: linear-gradient(180deg, #0B0B0E, #1B1B21) !important;
+    border: 1px solid rgba(167, 176, 186, 0.4) !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+}
+
+.videoOsdBottom .mdl-slider-background-upper {
+    background: rgba(167, 176, 186, 0.12) !important;
+}
+
+.videoOsdBottom .mdl-slider-background-lower {
+    background: linear-gradient(180deg, rgba(255, 220, 220, 0.18) 0 1px, rgba(0, 0, 0, 0) 1px calc(100% - 1px), rgba(0, 0, 0, 0.45) calc(100% - 1px)), linear-gradient(90deg, #33060B 0%, #6E111A 50%, #9A1F2A 85%, #B92B36 100%) !important;
+    box-shadow: 0 0 10px rgba(163, 35, 46, 0.35);
+    overflow: visible !important;
+}
+
+/* Losanges d'acier aux extrémités */
+.videoOsdBottom .mdl-slider-background-flex::before,
+.videoOsdBottom .mdl-slider-background-flex::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin-top: -4px;
+    background: #A7B0BA;
+    transform: rotate(45deg);
+    box-shadow: 0 0 0 2px #050506;
+    z-index: 3;
+}
+
+.videoOsdBottom .mdl-slider-background-flex {
+    position: relative;
+}
+
+.videoOsdBottom .mdl-slider-background-flex::before {
+    left: -6px;
+}
+
+.videoOsdBottom .mdl-slider-background-flex::after {
+    right: -6px;
+}
+
+/* Le pouce natif reste cliquable mais invisible : le loup le remplace */
+.videoOsdBottom .mdl-slider::-webkit-slider-thumb {
+    opacity: 0 !important;
+}
+
+.videoOsdBottom .mdl-slider::-moz-range-thumb {
+    opacity: 0 !important;
+}
+
+/* Chapitres : petits losanges */
+.videoOsdBottom .sliderMarker {
+    width: 6px !important;
+    height: 6px !important;
+    background: #A7B0BA !important;
+    transform: translateX(-50%) rotate(45deg);
+    box-shadow: 0 0 0 1.5px #050506;
+}
+
+/* ---------- Le loup en tête ---------- */
+.videoOsdBottom .mdl-slider-background-lower::after {
+    content: "";
+    position: absolute;
+    right: -46px;
+    top: 50%;
+    width: 86px;
+    height: 41px;
+    margin-top: -24px;
+    z-index: 5;
+    pointer-events: none;
+    background: url("../assets/img/loup-course.webp") 0 0 / 344px 41px no-repeat;
+    filter: drop-shadow(0 0 5px rgba(199, 52, 65, 0.45));
+    animation: wf-course-osd 0.48s steps(4) infinite;
+    transition: transform var(--wf-normal, 320ms) var(--wf-courbe, ease);
+    transform-origin: 40% 85%;
+}
+
+.videoOsdBottom .sliderContainer:hover .mdl-slider-background-lower::after {
+    transform: scale(1.25);
+}
+
+@keyframes wf-course-osd {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: -344px 0;
+    }
+}
+
+/* ---------- Empreintes de sang et braises derrière le loup ---------- */
+.videoOsdBottom .mdl-slider-background-lower::before {
+    content: "";
+    position: absolute;
+    right: 34px;
+    bottom: -16px;
+    width: 260px;
+    max-width: calc(100% - 34px);
+    height: 70px;
+    z-index: 4;
+    pointer-events: none;
+    background-image:
+        url("../assets/img/braises-a.webp"),
+        url("../assets/img/braises-b.webp"),
+        url("../assets/img/piste-pattes.webp");
+    background-size: 90px 60px, 130px 70px, 96px 24px;
+    background-repeat: repeat, repeat, repeat-x;
+    background-position: 0 0, 0 0, 0 calc(100% - 4px);
+    -webkit-mask-image: linear-gradient(to left, #000 0%, #000 30%, transparent 100%);
+    mask-image: linear-gradient(to left, #000 0%, #000 30%, transparent 100%);
+    animation: wf-piste 1.92s linear infinite;
+}
+
+@keyframes wf-piste {
+    from {
+        background-position: 0 0, 0 0, 0 calc(100% - 4px);
+    }
+
+    to {
+        background-position: -90px -60px, -130px -70px, -96px calc(100% - 4px);
+    }
+}
+
+/* ---------- Volume : le même loup, en plus petit ---------- */
+.videoOsdBottom .osdVolumeSliderContainer .mdl-slider-background-lower::after {
+    right: -26px;
+    width: 50px;
+    height: 24px;
+    margin-top: -14px;
+    background-size: 200px 24px;
+    animation-name: wf-course-volume;
+}
+
+.videoOsdBottom .osdVolumeSliderContainer .mdl-slider-background-lower::before {
+    right: 20px;
+    width: 110px;
+    max-width: calc(100% - 20px);
+    height: 40px;
+    bottom: -10px;
+    background-size: 60px 40px, 90px 46px, 64px 16px;
+    animation-name: wf-piste-volume;
+}
+
+@keyframes wf-piste-volume {
+    from {
+        background-position: 0 0, 0 0, 0 calc(100% - 4px);
+    }
+
+    to {
+        background-position: -60px -40px, -90px -46px, -64px calc(100% - 4px);
+    }
+}
+
+@keyframes wf-course-volume {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: -200px 0;
+    }
+}
+
+/* ---------- Mobile : loup un peu plus petit ---------- */
+@media (max-width: 599px) {
+    .videoOsdBottom .mdl-slider-background-lower::after {
+        right: -32px;
+        width: 62px;
+        height: 30px;
+        margin-top: -18px;
+        background-size: 248px 30px;
+        animation-name: wf-course-osd-mobile;
+    }
+
+    .videoOsdBottom .mdl-slider-background-lower::before {
+        width: 160px;
+    }
+}
+
+@keyframes wf-course-osd-mobile {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: -248px 0;
+    }
+}

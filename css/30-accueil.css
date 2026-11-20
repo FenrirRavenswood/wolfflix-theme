@@ -1,0 +1,275 @@
+/* =====================================================================
+   WolfFlix — Module 30 : Accueil et cartes
+   Titres de rangées, tuiles « Mes médias », cartes (survol, reflet),
+   barres de progression au loup, apparition des cartes en cascade.
+   Cible : Jellyfin Web 12.4. CSS seul (l'inclinaison 3D viendra en JS).
+   Désactiver : commenter la ligne @import de ce fichier.
+   ===================================================================== */
+
+/* ---------- Titres de rangées ---------- */
+.sectionTitle,
+.sectionTitle-cards {
+    color: #E9E6E1;
+    font-size: 1.55em;
+}
+
+.sectionTitleContainer .sectionTitle-link,
+.sectionTitle-link {
+    color: #E9E6E1;
+    transition: color var(--wf-rapide, 160ms);
+}
+
+.sectionTitle-link:hover {
+    color: #FFFFFF;
+}
+
+.sectionTitle-link .material-icons,
+.sectionTitleContainer .material-icons {
+    color: #C73441;
+    transition: transform var(--wf-normal, 320ms) var(--wf-courbe, ease);
+}
+
+.sectionTitle-link:hover .material-icons {
+    transform: translateX(5px);
+}
+
+/* ---------- Tuiles « Mes médias » ---------- */
+.homeLibraryButton {
+    background: linear-gradient(180deg, #18181D, #111114) !important;
+    border: 1px solid rgba(167, 176, 186, 0.28) !important;
+    border-radius: 4px !important;
+    color: #E9E6E1 !important;
+    font-family: var(--wf-titre);
+    font-size: 1.15em !important;
+    letter-spacing: 0.03em;
+    position: relative;
+    overflow: hidden;
+    transition: border-color var(--wf-normal, 320ms), transform var(--wf-normal, 320ms) var(--wf-courbe, ease), box-shadow var(--wf-normal, 320ms);
+}
+
+.homeLibraryButton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0) 62%);
+    transform: translateX(-120%);
+    transition: transform 0.9s var(--wf-courbe, ease);
+    pointer-events: none;
+}
+
+.homeLibraryButton .homeLibraryIcon {
+    color: #C73441;
+}
+
+@media (hover: hover) {
+    .homeLibraryButton:hover {
+        border-color: #C73441 !important;
+        transform: translateY(-3px);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(199, 52, 65, 0.35);
+    }
+
+    .homeLibraryButton:hover::after {
+        transform: translateX(120%);
+    }
+}
+
+/* ---------- Cartes ---------- */
+.cardBox:not(.visualCardBox) .cardPadder {
+    background-color: #18181D;
+    border-radius: 4px;
+}
+
+.cardScalable,
+.cardContent,
+.cardImageContainer,
+.blurhash-canvas {
+    border-radius: 4px;
+}
+
+.cardBox:not(.visualCardBox) .cardScalable {
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(167, 176, 186, 0.06);
+}
+
+/* Images de remplacement (pas d'affiche) : acier sombre au lieu des couleurs vives */
+.defaultCardBackground,
+.defaultCardBackground1,
+.defaultCardBackground2,
+.defaultCardBackground3,
+.defaultCardBackground4,
+.defaultCardBackground5 {
+    background: radial-gradient(70% 70% at 50% 35%, #24242B, #141418) !important;
+    color: #4A4A55 !important;
+}
+
+.defaultCardBackground .cardImageIcon,
+.cardImageIcon {
+    color: #4A4A55;
+}
+
+/* Titres sous les cartes */
+.cardText {
+    color: rgba(233, 230, 225, 0.88);
+}
+
+.cardText-secondary {
+    color: #8F949B;
+}
+
+/* Survol (ordinateur) : la carte se soulève, un filet sang s'allume, un reflet d'acier passe */
+@media (hover: hover) and (pointer: fine) {
+    .card .cardScalable {
+        position: relative;
+        transition: transform var(--wf-normal, 320ms) var(--wf-courbe, ease), box-shadow var(--wf-normal, 320ms);
+        will-change: transform;
+    }
+
+    .card .cardScalable::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        border-radius: inherit;
+        pointer-events: none;
+        background: linear-gradient(105deg, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0.24) 50%, rgba(220, 230, 240, 0.06) 56%, rgba(255, 255, 255, 0) 64%);
+        transform: translateX(-130%);
+        transition: transform 0.9s var(--wf-courbe, ease);
+    }
+
+    .card .cardScalable::before {
+        content: "";
+        position: absolute;
+        left: 12%;
+        right: 12%;
+        bottom: 0;
+        height: 2px;
+        z-index: 4;
+        background: #C73441;
+        box-shadow: 0 0 12px #C73441;
+        transform: scaleX(0);
+        transition: transform var(--wf-normal, 320ms) var(--wf-courbe, ease);
+        pointer-events: none;
+    }
+
+    .card:hover .cardScalable,
+    .card:focus-within .cardScalable {
+        transform: translateY(-6px) scale(1.04);
+        box-shadow: 0 22px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(213, 219, 225, 0.22);
+    }
+
+    .card:hover .cardScalable::after {
+        transform: translateX(130%);
+    }
+
+    .card:hover .cardScalable::before {
+        transform: scaleX(1);
+    }
+
+    .card:hover .cardText {
+        color: #FFFFFF;
+    }
+
+    /* Rangées : laisser de la place à la carte qui grossit */
+    .itemsContainer.scrollSlider {
+        padding-top: 10px;
+        padding-bottom: 14px;
+    }
+}
+
+/* Bouton lecture qui apparaît au survol */
+.cardOverlayButton-centered,
+.cardOverlayFab-primary {
+    background: rgba(163, 35, 46, 0.92) !important;
+    color: #F4F1EC !important;
+    border: 1px solid #C73441 !important;
+}
+
+/* Indicateurs (vu, nombre d'épisodes) */
+.countIndicator,
+.playedIndicator {
+    background: #5E1219 !important;
+    color: #F4F1EC !important;
+    box-shadow: 0 0 0 1px rgba(167, 176, 186, 0.5), 0 2px 6px rgba(0, 0, 0, 0.6);
+    font-family: var(--wf-texte-police);
+    font-weight: 600;
+}
+
+/* ---------- Barres de progression des cartes : rail gothique + petit loup ---------- */
+.itemProgressBar {
+    height: 6px !important;
+    background: linear-gradient(180deg, #0B0B0E, #1B1B21) !important;
+    border: 1px solid rgba(167, 176, 186, 0.4);
+    border-radius: 0 !important;
+    overflow: visible !important;
+}
+
+.itemProgressBarForeground {
+    background: linear-gradient(90deg, #33060B, #6E111A 50%, #9A1F2A 85%, #B92B36) !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+}
+
+.itemProgressBarForeground::after {
+    content: "";
+    position: absolute;
+    right: -22px;
+    top: 50%;
+    width: 44px;
+    height: 21px;
+    margin-top: -12px;
+    background: url("../assets/img/loup-course.webp") -88px 0 / 176px 21px no-repeat;
+    filter: drop-shadow(0 0 3px rgba(199, 52, 65, 0.5));
+    pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .card:hover .itemProgressBarForeground::after {
+        animation: wf-course-mini 0.48s steps(4) infinite;
+    }
+}
+
+@keyframes wf-course-mini {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: -176px 0;
+    }
+}
+
+/* ---------- Apparition des cartes en cascade ---------- */
+.homeSectionsContainer .itemsContainer > .card {
+    animation: wf-cascade 0.6s var(--wf-courbe, ease) both;
+}
+
+.homeSectionsContainer .itemsContainer > .card:nth-child(2) { animation-delay: 40ms; }
+.homeSectionsContainer .itemsContainer > .card:nth-child(3) { animation-delay: 80ms; }
+.homeSectionsContainer .itemsContainer > .card:nth-child(4) { animation-delay: 120ms; }
+.homeSectionsContainer .itemsContainer > .card:nth-child(5) { animation-delay: 160ms; }
+.homeSectionsContainer .itemsContainer > .card:nth-child(6) { animation-delay: 200ms; }
+.homeSectionsContainer .itemsContainer > .card:nth-child(7) { animation-delay: 240ms; }
+.homeSectionsContainer .itemsContainer > .card:nth-child(8) { animation-delay: 280ms; }
+.homeSectionsContainer .itemsContainer > .card:nth-child(n+9) { animation-delay: 300ms; }
+
+@keyframes wf-cascade {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Flèches de défilement des rangées */
+.emby-scrollbuttons-button {
+    color: #E9E6E1;
+    transition: color var(--wf-rapide, 160ms), transform var(--wf-rapide, 160ms);
+}
+
+.emby-scrollbuttons-button:hover {
+    color: #C73441;
+    transform: scale(1.15);
+}

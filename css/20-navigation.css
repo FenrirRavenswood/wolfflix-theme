@@ -1,0 +1,166 @@
+/* =====================================================================
+   WolfFlix — Module 20 : Navigation
+   Barre du haut, liens de bibliothèques, menus, onglet Playlists masqué.
+   Cible : Jellyfin Web 12.4 (interface Modern). CSS seul.
+   Désactiver : commenter la ligne @import de ce fichier.
+   ===================================================================== */
+
+/* ---------- Barre du haut ---------- */
+.MuiAppBar-root {
+    background-image: linear-gradient(180deg, rgba(10, 10, 12, 0.96), rgba(10, 10, 12, 0.82)) !important;
+    box-shadow: 0 1px 0 rgba(167, 176, 186, 0.12), 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Liens de bibliothèques (Favoris, Films, Séries…) */
+.MuiToolbar-root .MuiButton-root:not([href="#/"]) {
+    position: relative;
+    font-family: var(--wf-titre);
+    font-size: 1.05rem;
+    letter-spacing: 0.03em;
+    text-transform: none;
+    color: rgba(233, 230, 225, 0.78);
+    transition: color var(--wf-rapide, 160ms) ease;
+}
+
+.MuiToolbar-root .MuiButton-root:not([href="#/"]):hover {
+    color: #FFFFFF;
+    background: transparent;
+}
+
+.MuiToolbar-root .MuiButton-root:not([href="#/"])::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 4px;
+    height: 1px;
+    background: #C73441;
+    box-shadow: 0 0 8px #C73441;
+    transform: scaleX(0);
+    transition: transform var(--wf-normal, 320ms) var(--wf-courbe, ease);
+}
+
+.MuiToolbar-root .MuiButton-root:not([href="#/"]):hover::after,
+.MuiToolbar-root .MuiButton-root.Mui-selected::after,
+.MuiToolbar-root .MuiButton-root[aria-current="page"]::after {
+    transform: scaleX(1);
+}
+
+.MuiToolbar-root .MuiButton-root .MuiButton-startIcon {
+    opacity: 0.85;
+}
+
+/* Boutons ronds (recherche, SyncPlay, diffusion) */
+.MuiToolbar-root .MuiIconButton-root {
+    color: rgba(233, 230, 225, 0.78);
+    transition: color var(--wf-rapide, 160ms), transform var(--wf-rapide, 160ms);
+}
+
+.MuiToolbar-root .MuiIconButton-root:hover {
+    color: #FFFFFF;
+    transform: scale(1.08);
+    background: rgba(167, 176, 186, 0.08);
+}
+
+/* Avatar */
+.MuiToolbar-root .MuiAvatar-root {
+    border: 1px solid #A7B0BA;
+    background: #18181D;
+    color: #E9E6E1;
+    transition: border-color var(--wf-normal, 320ms), box-shadow var(--wf-normal, 320ms);
+}
+
+.MuiToolbar-root .MuiIconButton-root:hover .MuiAvatar-root {
+    border-color: #C73441;
+    box-shadow: 0 0 0 3px rgba(199, 52, 65, 0.25);
+}
+
+/* ---------- Onglet Playlists masqué (barre, menus et accueil) ---------- */
+a[href^="#/playlists"],
+.homeLibraryButton[href^="#/playlists"],
+.MuiMenuItem-root[href^="#/playlists"] {
+    display: none !important;
+}
+
+/* ---------- Menus déroulants : apparition en éventail ---------- */
+.MuiMenu-paper,
+.MuiPopover-paper {
+    background: #141418 !important;
+    border: 1px solid rgba(167, 176, 186, 0.22);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6) !important;
+}
+
+.MuiMenu-list > * {
+    animation: wf-eventail 0.32s var(--wf-courbe, ease) both;
+}
+
+.MuiMenu-list > :nth-child(2) { animation-delay: 30ms; }
+.MuiMenu-list > :nth-child(3) { animation-delay: 60ms; }
+.MuiMenu-list > :nth-child(4) { animation-delay: 90ms; }
+.MuiMenu-list > :nth-child(5) { animation-delay: 120ms; }
+.MuiMenu-list > :nth-child(6) { animation-delay: 150ms; }
+.MuiMenu-list > :nth-child(7) { animation-delay: 180ms; }
+.MuiMenu-list > :nth-child(n+8) { animation-delay: 210ms; }
+
+.MuiMenuItem-root:hover,
+.MuiMenuItem-root.Mui-focusVisible {
+    background: rgba(163, 35, 46, 0.18) !important;
+}
+
+/* Menus contextuels classiques (⋮ sur une carte) */
+.actionSheet,
+.dialog {
+    background: #141418 !important;
+    border: 1px solid rgba(167, 176, 186, 0.2);
+}
+
+.actionSheetMenuItem:hover {
+    background: rgba(163, 35, 46, 0.18) !important;
+}
+
+.actionSheetContent .actionSheetMenuItem {
+    animation: wf-eventail 0.3s var(--wf-courbe, ease) both;
+}
+
+@keyframes wf-eventail {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) rotate(-1.5deg);
+        transform-origin: top left;
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ---------- Notifications : cartouche au blason ---------- */
+.toast,
+.MuiSnackbarContent-root {
+    background: #141418 !important;
+    color: #E9E6E1 !important;
+    border: 1px solid rgba(167, 176, 186, 0.3);
+    border-left: 3px solid #C73441;
+    border-radius: 4px !important;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6) !important;
+    font-family: var(--wf-texte-police);
+    padding-left: 54px !important;
+    background-image: url("../assets/img/blason-256.webp") !important;
+    background-repeat: no-repeat !important;
+    background-size: 34px auto !important;
+    background-position: 10px center !important;
+    animation: wf-toast 0.5s cubic-bezier(.2, 1.2, .4, 1) both;
+}
+
+@keyframes wf-toast {
+    from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}

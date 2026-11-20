@@ -8,10 +8,10 @@ Thème personnel pour l'interface web de Jellyfin 12.4 : dark fantasy, palette s
 |---|---|---|
 | `css/00-fondations.css` | Palette, polices, curseurs, barre de défilement, sélection | CSS seul |
 | `css/10-identite.css` | Blason dans l'en-tête et sur la connexion, loup de chargement, fond | CSS seul |
-| `css/20-navigation.css` | Barre du haut, onglets, menus *(à venir)* | CSS seul |
-| `css/30-accueil.css` | Rangées, cartes, carte agrandie *(à venir)* | CSS (+ JS) |
-| `css/40-fiches.css` | Fiches film, série, saison, distribution *(à venir)* | CSS (+ JS) |
-| `css/50-lecteur.css` | Lecteur, barre au loup, volume *(à venir)* | CSS seul |
+| `css/20-navigation.css` | Barre du haut, menus en éventail, notifications, Playlists masqué | CSS seul |
+| `css/30-accueil.css` | Titres, tuiles, cartes (survol, reflet), progression au loup, cascade | CSS (+ JS) |
+| `css/40-fiches.css` | Fiches : bandeau, boutons animés, menus, lettrine, médaillons | CSS (+ JS) |
+| `css/50-lecteur.css` | Rail gothique, loup sur progression et volume, pattes et braises | CSS seul |
 | `js/…` | Modules JavaScript Injector *(à venir)* | JavaScript |
 
 ## Installation
@@ -20,8 +20,12 @@ Dans Jellyfin : **Tableau de bord → Général → Code CSS personnalisé**, co
 
 ```css
 /* WolfFlix — thème Sang et acier */
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.1.0/css/00-fondations.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.1.0/css/10-identite.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.2.0/css/00-fondations.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.2.0/css/10-identite.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.2.0/css/20-navigation.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.2.0/css/30-accueil.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.2.0/css/40-fiches.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.2.0/css/50-lecteur.css");
 ```
 
 Puis **Enregistrer**, et recharger la page (Ctrl + F5).
@@ -30,7 +34,7 @@ Puis **Enregistrer**, et recharger la page (Ctrl + F5).
 
 - **Un module** : mettre sa ligne en commentaire, par exemple
   `/* @import url(".../10-identite.css"); */`
-- **Revenir à une version précédente** : remplacer `@v0.1.0` par l'ancienne version dans les lignes `@import`.
+- **Revenir à une version précédente** : remplacer `@v0.2.0` par l'ancienne version dans les lignes `@import`.
 - **Tout le thème** : vider le champ Code CSS personnalisé, ou y recoller l'ancienne sauvegarde.
 - **Pour un seul utilisateur** : Paramètres → Affichage → « Désactiver le code CSS personnalisé fourni par le serveur ».
 

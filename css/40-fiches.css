@@ -1,0 +1,335 @@
+/* =====================================================================
+   WolfFlix — Module 40 : Fiches (films, séries, saisons, personnes)
+   Fond animé, bandeau, titre, boutons, menus audio/sous-titres,
+   synopsis avec lettrine, distribution en médaillons.
+   Cible : Jellyfin Web 12.4. CSS seul.
+   Désactiver : commenter la ligne @import de ce fichier.
+   ===================================================================== */
+
+/* ---------- Fond : vignettage ---------- */
+.itemBackdrop {
+    position: relative;
+    overflow: hidden;
+}
+
+.itemBackdrop::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(0deg, #0A0A0C 0%, rgba(10, 10, 12, 0) 45%),
+        linear-gradient(90deg, rgba(10, 10, 12, 0.85) 0%, rgba(10, 10, 12, 0) 45%);
+}
+
+/* ---------- Bandeau (titre + boutons) : fondu au lieu de la bande grise ---------- */
+.detailRibbon {
+    background: linear-gradient(180deg, rgba(10, 10, 12, 0.35), #0A0A0C 85%) !important;
+    background-image: linear-gradient(180deg, rgba(10, 10, 12, 0.35), #0A0A0C 85%) !important;
+    border-top: 1px solid rgba(167, 176, 186, 0.10);
+}
+
+.detailPageContent,
+.detailPageWrapperContainer {
+    background: transparent;
+}
+
+/* Titre */
+.itemDetailPage .nameContainer .itemName,
+.itemDetailPage .parentNameLast {
+    font-family: var(--wf-titre);
+    font-size: clamp(1.8em, 3.2vw, 2.8em);
+    line-height: 1.05;
+    color: #F1EEE9;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+    animation: wf-montee 0.8s var(--wf-courbe, ease) both;
+}
+
+.itemDetailPage .nameContainer .originalTitle,
+.itemDetailPage .nameContainer h3 {
+    font-family: var(--wf-titre);
+    color: #A7B0BA;
+    letter-spacing: 0.04em;
+}
+
+/* Logo du film quand Jellyfin l'affiche */
+.detailLogo {
+    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7));
+    animation: wf-montee 0.9s var(--wf-courbe, ease) both;
+}
+
+/* Infos (année, durée, âge, notes, heure de fin) */
+.itemMiscInfo {
+    color: rgba(233, 230, 225, 0.80);
+    animation: wf-montee 0.8s var(--wf-courbe, ease) 0.1s both;
+}
+
+.itemMiscInfo .mediaInfoOfficialRating,
+.itemMiscInfo .mediaInfoText {
+    border: 1px solid rgba(167, 176, 186, 0.5) !important;
+    border-radius: 2px;
+    background: rgba(10, 10, 12, 0.5);
+    color: #E3E7EB;
+}
+
+.itemMiscInfo .endsAt {
+    color: #E9E6E1;
+}
+
+.starRatingContainer .material-icons,
+.mediaInfoCriticRating {
+    filter: saturate(0.7);
+}
+
+/* Les notes se « remplissent » à l'ouverture */
+.starRatingContainer,
+.mediaInfoCriticRating {
+    animation: wf-remplissage 1s var(--wf-courbe, ease) 0.25s both;
+}
+
+@keyframes wf-remplissage {
+    from {
+        clip-path: inset(0 100% 0 0);
+        opacity: 0.3;
+    }
+
+    to {
+        clip-path: inset(0 0 0 0);
+        opacity: 1;
+    }
+}
+
+@keyframes wf-montee {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ---------- Boutons de la fiche ---------- */
+.mainDetailButtons .detailButton {
+    border: 1px solid rgba(167, 176, 186, 0.4) !important;
+    border-radius: 50% !important;
+    background: rgba(10, 10, 12, 0.55) !important;
+    color: #E9E6E1 !important;
+    transition: border-color var(--wf-rapide, 160ms), transform var(--wf-rapide, 160ms), background var(--wf-rapide, 160ms);
+}
+
+.mainDetailButtons .detailButton:hover {
+    border-color: #D5DBE1 !important;
+    background: rgba(233, 230, 225, 0.08) !important;
+    transform: scale(1.08);
+}
+
+.mainDetailButtons .detailButton:active {
+    transform: scale(0.92);
+}
+
+/* Lecture : rouge sang, qui « respire » */
+.mainDetailButtons .btnPlay,
+.mainDetailButtons .btnReplay {
+    position: relative;
+    background: #A3232E !important;
+    border-color: #C73441 !important;
+    color: #F4F1EC !important;
+}
+
+.mainDetailButtons .btnPlay:hover {
+    background: #B42A36 !important;
+}
+
+.mainDetailButtons .btnPlay::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    border: 1px solid #C73441;
+    pointer-events: none;
+    animation: wf-respire 2.4s ease-out infinite;
+}
+
+@keyframes wf-respire {
+    0% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1.45);
+        opacity: 0;
+    }
+}
+
+/* Favori : le cœur bat */
+.ratingbutton-icon-withrating {
+    color: #E5404F !important;
+    animation: wf-bat 0.6s var(--wf-courbe, ease);
+}
+
+@keyframes wf-bat {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.32); }
+    45% { transform: scale(0.92); }
+    70% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+}
+
+/* Vu : la coche se pose d'un coup de sceau */
+.playstatebutton-icon-played {
+    color: #D5DBE1 !important;
+    animation: wf-sceau 0.55s cubic-bezier(.2, 1.4, .4, 1);
+}
+
+@keyframes wf-sceau {
+    0% { transform: scale(1.9) rotate(-20deg); opacity: 0; }
+    60% { transform: scale(0.92) rotate(-6deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* ---------- Menus audio / sous-titres / version ---------- */
+.detailTrackSelect,
+.trackSelections select {
+    background-color: #111114 !important;
+    border: 1px solid rgba(167, 176, 186, 0.4) !important;
+    border-radius: 3px !important;
+    color: #E9E6E1 !important;
+    font-family: var(--wf-texte-police);
+    transition: border-color var(--wf-rapide, 160ms), box-shadow var(--wf-rapide, 160ms);
+}
+
+.detailTrackSelect:hover {
+    border-color: #D5DBE1 !important;
+}
+
+.detailTrackSelect:focus {
+    border-color: #C73441 !important;
+    box-shadow: 0 0 0 3px rgba(199, 52, 65, 0.25);
+}
+
+.trackSelections .selectLabel,
+.trackSelections label {
+    color: #8F949B;
+}
+
+/* ---------- Synopsis : lettrine ---------- */
+.itemDetailPage .overview {
+    color: #D9D6D1;
+    font-size: 1.05em;
+    line-height: 1.65;
+}
+
+.itemDetailPage .overview::first-letter {
+    font-family: var(--wf-titre);
+    float: left;
+    font-size: 3.4em;
+    line-height: 0.85;
+    padding: 0.08em 0.12em 0 0;
+    color: #C73441;
+}
+
+.itemDetailPage .tagline {
+    font-style: italic;
+    color: #D5D1CB;
+}
+
+/* Étiquettes et liens externes : plus discrets */
+.itemTags,
+.itemExternalLinks {
+    font-size: 0.85em;
+    color: #8F949B;
+}
+
+.itemTags a,
+.itemExternalLinks a {
+    color: #B3B7BD !important;
+}
+
+.itemTags a:hover,
+.itemExternalLinks a:hover {
+    color: #E9E6E1 !important;
+}
+
+/* Horaire de diffusion en anglais (« Airs Thursdays at… ») masqué */
+#seriesAirTime {
+    display: none !important;
+}
+
+/* Réalisateur, studios, genres */
+.itemDetailsGroup .label {
+    color: #8F949B;
+}
+
+.itemDetailsGroup .content a,
+.itemDetailsGroup .content {
+    color: #E3E0DB;
+}
+
+/* ---------- Affiche principale ---------- */
+.detailImageContainer .card .cardScalable,
+.detailImageContainer .cardImageContainer {
+    border-radius: 4px;
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(167, 176, 186, 0.18) !important;
+}
+
+/* ---------- Distribution : médaillons ronds cerclés d'acier ---------- */
+.personCard .cardScalable {
+    border-radius: 50% !important;
+    box-shadow: 0 0 0 1px rgba(167, 176, 186, 0.45), 0 10px 22px rgba(0, 0, 0, 0.55) !important;
+}
+
+.personCard .cardPadder-overflowPortrait,
+.personCard .cardPadder-portrait {
+    padding-bottom: 100% !important;
+    border-radius: 50% !important;
+}
+
+.personCard .cardContent,
+.personCard .cardImageContainer,
+.personCard .coveredImage,
+.personCard .blurhash-canvas {
+    border-radius: 50% !important;
+}
+
+.personCard .coveredImage {
+    background-position: 50% 20% !important;
+}
+
+.personCard .cardOverlayContainer {
+    clip-path: circle(50% at 50% 50%);
+}
+
+.personCard .cardScalable::before,
+.personCard .cardScalable::after {
+    display: none !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .personCard:hover .cardScalable {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 0 0 1px #C73441, 0 0 0 4px rgba(199, 52, 65, 0.2), 0 12px 24px rgba(0, 0, 0, 0.6) !important;
+    }
+}
+
+/* Personnes sans photo : silhouette sobre */
+.personCard .defaultCardBackground {
+    background: radial-gradient(70% 70% at 50% 35%, #24242B, #141418) !important;
+}
+
+.personCard .cardImageIcon {
+    color: #3A3A44 !important;
+}
+
+/* ---------- Saisons et épisodes ---------- */
+.itemDetailPage .listItem {
+    border-radius: 4px;
+    transition: background var(--wf-rapide, 160ms);
+}
+
+.itemDetailPage .listItem:hover {
+    background: rgba(167, 176, 186, 0.06);
+}
