@@ -32,6 +32,12 @@
         return a && a.getCurrentUserId && a.getCurrentUserId() ? a : null;
     }
     function uid() { return api().getCurrentUserId(); }
+    function frais(id) {
+        return json('Items/' + id, { userId: uid(), _: Date.now() }).catch(function () { return api().getItem(uid(), id); });
+    }
+    function utilisateur() {
+        return window.WolfFlix && window.WolfFlix.utilisateur ? window.WolfFlix.utilisateur() : api().getCurrentUser();
+    }
     function url(chemin, q) { return api().getUrl(chemin, q); }
     function json(chemin, q) { return api().getJSON(url(chemin, q)); }
     function esc(t) {
@@ -78,6 +84,13 @@
         if (p) return p.split(',').filter(Boolean);
         var tag = ((bs && bs.Tags) || []).filter(function (t) { return t.indexOf('wfordre:') === 0; })[0];
         return tag ? tag.slice(8).split(',').filter(Boolean) : null;
+    }
+    /* Type choisi à la main (Saga / Cycle), rangé dans les métadonnées, sinon dans une étiquette */
+    function typeForce(bs) {
+        var f = bs && bs.ProviderIds && bs.ProviderIds.WolfFlixType;
+        if (f === 's' || f === 'c') return f;
+        var tag = ((bs && bs.Tags) || []).filter(function (t) { return /^wftype:[sc]$/.test(t); })[0];
+        return tag ? tag.slice(7) : null;
     }
     function ordreStocke(bs) {
         var j = jetons(bs);
@@ -139,7 +152,7 @@
                 var c = cache[b.Id];
                 return perime || !c || c.n !== b.ChildCount;
             });
-            return parallele(aFaire, 4, function (b) {
+            return parallele(aFaire, 6, function (b) {
                 return json('Users/' + uid() + '/Items', {
                     ParentId: b.Id, SortBy: 'PremiereDate,ProductionYear,SortName',
                     EnableImages: false, EnableUserData: false
@@ -159,8 +172,8 @@
                 });
             }).then(function () {
                 liste.forEach(function (b) {
-                    var f = b.ProviderIds && b.ProviderIds.WolfFlixType;
-                    if ((f === 's' || f === 'c') && cache[b.Id]) cache[b.Id].t = f;
+                    var f = typeForce(b);
+                    if (f && cache[b.Id]) cache[b.Id].t = f;
                 });
                 if (perime) cache._t = Date.now();
                 var existe = {};
@@ -170,8 +183,8 @@
                 return liste.map(function (b) {
                     var c = cache[b.Id] || { t: 's', ids: [] };
                     var o = ordreStocke(b);
-                    var force = b.ProviderIds && b.ProviderIds.WolfFlixType;
-                    if (force === 's' || force === 'c') {
+                    var force = typeForce(b);
+                    if (force) {
                         c.t = force;
                         if (cache[b.Id]) cache[b.Id].t = force;
                     }
@@ -445,7 +458,7 @@
         creerBtn.hidden = true;
         creerBtn.addEventListener('click', function () { creer(type); });
         // Bouton réservé aux administrateurs
-        api().getCurrentUser().then(function (u) {
+        utilisateur().then(function (u) {
             if (u && u.Policy && u.Policy.IsAdministrator) creerBtn.hidden = false;
             else creerBtn.remove();
         }).catch(function () { creerBtn.remove(); });
@@ -608,7 +621,7 @@
     var typesItems = {};
     function typeItem(id) {
         if (typesItems[id]) return typesItems[id];
-        typesItems[id] = api().getItem(uid(), id);
+        typesItems[id] = window.WolfFlix && window.WolfFlix.element ? window.WolfFlix.element(id) : api().getItem(uid(), id);
         typesItems[id].catch(function () { delete typesItems[id]; });
         return typesItems[id];
     }
@@ -641,7 +654,7 @@
 
         // Étiquettes techniques à ne pas montrer
         page.querySelectorAll('.itemTags a').forEach(function (a) {
-            if (/^wfordre:/.test(a.textContent.trim())) a.style.display = 'none';
+            if (/^(wfordre:|wftype:)/.test(a.textContent.trim())) a.style.display = 'none';
         });
 
         typeItem(id).then(function (item) {
@@ -654,7 +667,7 @@
                 return;
             }
             var entree = cache[id];
-            var t = entree ? entree.t : 's';
+            var t = typeForce(item) || (entree ? entree.t : 's');
             var nom = p.querySelector('.nameContainer');
             if (nom && !nom.querySelector('.wf-surtitre')) {
                 nom.insertAdjacentHTML('afterbegin', '<div class="wf-surtitre">' + NOMS[t].un + '</div>');
@@ -685,10 +698,15 @@
     }
 
     function remplirOrdre(bloc, item, t) {
-        Promise.all([enfantsOrdonnes(item), api().getCurrentUser()]).then(function (r) {
+        Promise.all([enfantsOrdonnes(item), utilisateur()]).then(function (r) {
             var enfants = r[0];
             var user = r[1] || {};
             var admin = !!(user.Policy && user.Policy.IsAdministrator);
+            var force = typeForce(item);
+            var contenuCycle = enfants.some(function (e) { return /^(Series|Season|Episode)$/.test(e.Type); });
+            t = force || (contenuCycle ? 'c' : 's');
+            var sur = pageFiche() && pageFiche().querySelector('.wf-surtitre');
+            if (sur) sur.textContent = NOMS[t].un;
             var perso = !!ordreStocke(item);
             var groupes = groupesStockes(item);
             var dernierVu = -1;
@@ -769,16 +787,19 @@
         var fond = document.createElement('div');
         fond.className = 'wf-editeur-fond';
         fond.innerHTML = '<div class="wf-editeur" role="dialog" aria-modal="true" aria-label="Ordre de visionnage">' +
-            '<header><p class="wf-page-surtitre">' + NOMS[t].un + '</p><h2>' + esc(item.Name) + '</h2>' +
-            '<p class="wf-aide">Glisse par la poignée ou utilise les flèches.' + (cycle ? ' Une « saison custom » regroupe les titres placés en dessous, jusqu\'à la suivante ou à une fin de saison custom.' : '') + '</p></header>' +
+            '<header><div class="wf-type-choix" role="group" aria-label="Type">' +
+            '<button type="button" data-act="type-s" class="' + (t === 's' ? 'wf-actif' : '') + '">Saga</button>' +
+            '<button type="button" data-act="type-c" class="' + (t === 'c' ? 'wf-actif' : '') + '">Cycle</button></div>' +
+            '<h2>' + esc(item.Name) + '</h2>' +
+            '<p class="wf-aide">Glisse par la poignée ou utilise les flèches.<span class="wf-seulement-cycle"> Une « saison custom » regroupe les titres placés en dessous, jusqu\'à la suivante ou à une fin de saison custom.</span></p></header>' +
             '<ol class="wf-editeur-liste"></ol>' +
             '<div class="wf-editeur-ajout">' +
             '<div class="wf-editeur-boutons"><button type="button" class="wf-btn wf-btn-sec wf-editeur-plus" data-act="plus"><span class="material-icons add" aria-hidden="true"></span> Ajouter un titre</button>' +
-            (cycle ? '<button type="button" class="wf-btn wf-btn-sec" data-act="groupe"><span class="material-icons playlist_add" aria-hidden="true"></span> Saison custom</button>' +
-                '<button type="button" class="wf-btn wf-btn-sec" data-act="fin-groupe"><span class="material-icons playlist_remove" aria-hidden="true"></span> Fin de saison custom</button>' : '') +
+            '<button type="button" class="wf-btn wf-btn-sec wf-seulement-cycle" data-act="groupe"><span class="material-icons playlist_add" aria-hidden="true"></span> Saison custom</button>' +
+            '<button type="button" class="wf-btn wf-btn-sec wf-seulement-cycle" data-act="fin-groupe"><span class="material-icons playlist_remove" aria-hidden="true"></span> Fin de saison custom</button>' +
             '</div>' +
             '<label class="wf-champ"><span class="material-icons search" aria-hidden="true"></span>' +
-            '<input type="search" placeholder="' + (cycle ? 'Film, série ou épisode…' : 'Film ou série…') + '" aria-label="Rechercher"></label>' +
+            '<input type="search" placeholder="Film, série ou épisode…" aria-label="Rechercher"></label>' +
             '<div class="wf-editeur-resultats"></div></div>' +
             '<footer><span class="wf-editeur-etat"></span><button type="button" class="wf-btn wf-btn-sec" data-act="annuler">Annuler</button>' +
             '<button type="button" class="wf-btn wf-btn-pri" data-act="enregistrer">Enregistrer</button></footer></div>';
@@ -786,6 +807,15 @@
         html.classList.add('wf-modale-ouverte');
         var ol = fond.querySelector('.wf-editeur-liste');
         var etatTexte = fond.querySelector('.wf-editeur-etat');
+        var typeChange = false;
+        function appliquerType() {
+            fond.querySelectorAll('.wf-type-choix button').forEach(function (b) {
+                b.classList.toggle('wf-actif', b.getAttribute('data-act') === 'type-' + t);
+            });
+            fond.querySelectorAll('.wf-seulement-cycle').forEach(function (x) { x.hidden = !cycle; });
+            fond.querySelectorAll('[data-act="saisons"]').forEach(function (x) { x.hidden = !cycle; });
+        }
+        appliquerType();
 
         function ligne(e) {
             if (e.sorte === 'groupe') {
@@ -875,6 +905,13 @@
             var b = e.target.closest('[data-act]');
             if (!b) return;
             var act = b.getAttribute('data-act');
+            if (act === 'type-s' || act === 'type-c') {
+                t = act.slice(5);
+                cycle = t === 'c';
+                typeChange = true;
+                appliquerType();
+                return;
+            }
             if (['haut', 'bas', 'retirer'].indexOf(act) !== -1) relireDom();
             var li = b.closest('li');
             var k = li ? Array.prototype.indexOf.call(ol.children, li) : -1;
@@ -961,8 +998,8 @@
         }
         function resultatSerie(i) {
             return '<div class="wf-resultat-serie">' + boutonAjout(i, i.Name + ' (série entière)') +
-                (cycle ? '<button type="button" class="wf-lien-mini" data-act="saisons" data-serie="' + esc(i.Id) + '"><span class="material-icons expand_more" aria-hidden="true"></span> Saisons et épisodes</button>' +
-                    '<div class="wf-sous-resultats" data-serie="' + esc(i.Id) + '" hidden></div>' : '') + '</div>';
+                '<button type="button" class="wf-lien-mini" data-act="saisons" data-serie="' + esc(i.Id) + '"' + (cycle ? '' : ' hidden') + '><span class="material-icons expand_more" aria-hidden="true"></span> Saisons et épisodes</button>' +
+                '<div class="wf-sous-resultats" data-serie="' + esc(i.Id) + '" hidden></div></div>';
         }
         function ouvrirSaisons(b) {
             var id = b.getAttribute('data-serie');
@@ -1000,7 +1037,7 @@
             if (terme.length < 2) { res.innerHTML = ''; return; }
             minuterie = setTimeout(function () {
                 json('Users/' + uid() + '/Items', {
-                    searchTerm: terme, IncludeItemTypes: cycle ? 'Movie,Series,Episode' : 'Movie,Series', Recursive: true, Limit: 15,
+                    searchTerm: terme, IncludeItemTypes: 'Movie,Series,Episode', Recursive: true, Limit: 15,
                     Fields: 'ProductionYear', EnableImageTypes: 'Primary', ImageTypeLimit: 1, EnableUserData: false
                 }).then(function (r) {
                     if (champ.value.trim() !== terme) return;
@@ -1035,19 +1072,24 @@
             if (ajouts.length) p = p.then(function () { return a.ajax({ type: 'POST', url: url('Collections/' + item.Id + '/Items', { ids: ajouts.join(',') }) }); });
             if (retraits.length) p = p.then(function () { return a.ajax({ type: 'DELETE', url: url('Collections/' + item.Id + '/Items', { ids: retraits.join(',') }) }); });
             var valeur = jetonsListe.join(',');
-            p.then(function () { return a.getItem(uid(), item.Id); }).then(function (complet) {
+            p.then(function () { return frais(item.Id); }).then(function (complet) {
                 complet.ProviderIds = complet.ProviderIds || {};
                 complet.ProviderIds.WolfFlix = valeur;
-                if (cycle) complet.ProviderIds.WolfFlixType = 'c';
-                complet.Tags = (complet.Tags || []).filter(function (x) { return x.indexOf('wfordre:') !== 0; });
+                complet.ProviderIds.WolfFlixType = t;
+                complet.Tags = (complet.Tags || []).filter(function (x) { return x.indexOf('wfordre:') !== 0 && x.indexOf('wftype:') !== 0; });
                 return a.updateItem(complet);
-            }).then(function () { return a.getItem(uid(), item.Id); }).then(function (verif) {
-                if (verif.ProviderIds && verif.ProviderIds.WolfFlix === valeur) return verif;
-                verif.Tags = (verif.Tags || []).filter(function (x) { return x.indexOf('wfordre:') !== 0; }).concat(['wfordre:' + valeur]);
-                return a.updateItem(verif).then(function () { return a.getItem(uid(), item.Id); });
+            }).then(function () { return frais(item.Id); }).then(function (verif) {
+                if (verif.ProviderIds && verif.ProviderIds.WolfFlix === valeur && verif.ProviderIds.WolfFlixType === t) return verif;
+                // Repli : Jellyfin n'a pas gardé nos identifiants, on passe par les étiquettes
+                verif.Tags = (verif.Tags || []).filter(function (x) { return x.indexOf('wfordre:') !== 0 && x.indexOf('wftype:') !== 0; })
+                    .concat(['wfordre:' + valeur, 'wftype:' + t]);
+                return a.updateItem(verif).then(function () { return frais(item.Id); });
             }).then(function (frais) {
                 oublier(item.Id);
+                var sur = pageFiche() && pageFiche().querySelector('.wf-surtitre');
+                if (sur) sur.textContent = NOMS[t].un;
                 delete typesItems[item.Id];
+                if (window.WolfFlix && window.WolfFlix.oublierElement) window.WolfFlix.oublierElement(item.Id);
                 fermer();
                 toast('Ordre enregistré');
                 bloc.removeAttribute('data-id');
@@ -1108,23 +1150,24 @@
     }
 
     /* ---------- Orchestration ---------- */
+    function tout() {
+        if (!api()) return;
+        page();
+        accueil();
+        fiche();
+        favoris();
+        bibliotheques();
+        cyclesBibliotheque();
+    }
     var prevu = false;
     function passer() {
+        if (window.WolfFlix && window.WolfFlix.planifier) { window.WolfFlix.planifier(); return; }
         if (prevu) return;
         prevu = true;
-        requestAnimationFrame(function () {
-            prevu = false;
-            if (!api()) return;
-            page();
-            accueil();
-            fiche();
-            favoris();
-            bibliotheques();
-            cyclesBibliotheque();
-        });
+        requestAnimationFrame(function () { prevu = false; tout(); });
     }
+    if (window.WolfFlix && window.WolfFlix.abonner) window.WolfFlix.abonner(tout);
+    else new MutationObserver(passer).observe(document.body, { childList: true, subtree: true });
     window.addEventListener('wf-route', passer);
-    window.addEventListener('hashchange', passer);
-    new MutationObserver(passer).observe(document.body, { childList: true, subtree: true });
     passer();
 })();

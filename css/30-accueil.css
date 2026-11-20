@@ -120,7 +120,6 @@
     .card .cardScalable {
         position: relative;
         transition: transform 0.2s var(--wf-courbe, ease), box-shadow var(--wf-normal, 320ms);
-        will-change: transform;
     }
 
     .card .cardScalable::after {
@@ -246,8 +245,8 @@
 }
 
 /* ---------- Apparition des cartes en cascade ---------- */
-.homeSectionsContainer .itemsContainer > .card {
-    animation: wf-cascade 0.6s var(--wf-courbe, ease) both;
+.homeSectionsContainer .itemsContainer > .card:nth-child(-n+10) {
+    animation: wf-cascade 0.5s var(--wf-courbe, ease) both;
 }
 
 .homeSectionsContainer .itemsContainer > .card:nth-child(2) { animation-delay: 40ms; }
@@ -257,7 +256,8 @@
 .homeSectionsContainer .itemsContainer > .card:nth-child(6) { animation-delay: 200ms; }
 .homeSectionsContainer .itemsContainer > .card:nth-child(7) { animation-delay: 240ms; }
 .homeSectionsContainer .itemsContainer > .card:nth-child(8) { animation-delay: 280ms; }
-.homeSectionsContainer .itemsContainer > .card:nth-child(n+9) { animation-delay: 300ms; }
+.homeSectionsContainer .itemsContainer > .card:nth-child(9),
+.homeSectionsContainer .itemsContainer > .card:nth-child(10) { animation-delay: 300ms; }
 
 @keyframes wf-cascade {
     from {
@@ -289,7 +289,7 @@
     opacity: 0 !important;
 }
 
-.cardImageContainer:has(.playedIndicator)::before {
+.cardImageContainer.wf-vu::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -300,7 +300,7 @@
     transition: opacity var(--wf-normal, 320ms);
 }
 
-.cardImageContainer:has(.playedIndicator)::after {
+.cardImageContainer.wf-vu::after {
     content: "";
     position: absolute;
     right: 6%;
@@ -311,19 +311,18 @@
     z-index: 2;
     pointer-events: none;
     background: url("../assets/img/sceau-vu.webp") center / contain no-repeat;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.65));
     transform: rotate(-10deg);
     animation: wf-sceau-carte 0.55s cubic-bezier(.2, 1.4, .4, 1) both;
 }
 
 /* Vignettes larges (épisodes, « Continuer ») : sceau plus petit */
-.backdropCard .cardImageContainer:has(.playedIndicator)::after,
-.overflowBackdropCard .cardImageContainer:has(.playedIndicator)::after {
+.backdropCard .cardImageContainer.wf-vu::after,
+.overflowBackdropCard .cardImageContainer.wf-vu::after {
     width: 22%;
 }
 
 @media (hover: hover) {
-    .card:hover .cardImageContainer:has(.playedIndicator)::before {
+    .card:hover .cardImageContainer.wf-vu::before {
         opacity: 0.25;
     }
 }

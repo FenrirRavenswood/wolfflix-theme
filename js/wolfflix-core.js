@@ -19,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v1.2.0';
+    var VERSION = 'v1.3.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -69,6 +69,7 @@
     var dernierHash = null;
     function route() {
         var h = location.hash || '';
+        if (h !== dernierHash) elements = {};
         dernierHash = h;
         var tableau = /^#\/(dashboard|metadata|configurationpage)/.test(h);
         var accueil = (h === '' || h === '#/' || /^#\/home(\?|$)/.test(h)) && !/[?&](tab=1|wf=)/.test(h);
@@ -153,12 +154,17 @@
         })).then(function (r) {
             favoris = {};
             (r.Items || []).forEach(function (i) { favoris[i.Id] = true; });
-            marquerFavoris();
+            marquerFavoris(true);
         }).catch(function () { /* hors ligne : on réessaiera */ });
     }
-    function marquerFavoris() {
+    var versionFavoris = 0;
+    function marquerFavoris(tout) {
         if (!favoris) return;
-        document.querySelectorAll('.card[data-id]').forEach(function (carte) {
+        if (tout) versionFavoris++;
+        var v = String(versionFavoris);
+        // Seules les cartes nouvelles (ou toutes si la liste a changé) sont examinées
+        document.querySelectorAll('.card[data-id]:not([data-wf-fav="' + v + '"])').forEach(function (carte) {
+            carte.setAttribute('data-wf-fav', v);
             var est = !!favoris[carte.getAttribute('data-id')];
             var scal = carte.querySelector('.cardScalable');
             if (!scal) return;
@@ -173,10 +179,21 @@
                 signet.remove();
             }
         });
-        // Affiche de la fiche
         var m = /[?&]id=([0-9a-f]{32})/i.exec(location.hash);
         var affiche = document.querySelector('.detailImageContainer .card');
-        if (m && affiche && !affiche.getAttribute('data-id')) affiche.setAttribute('data-id', m[1]);
+        if (m && affiche && affiche.getAttribute('data-id') !== m[1]) {
+            affiche.setAttribute('data-id', m[1]);
+            affiche.removeAttribute('data-wf-fav');
+        }
+    }
+
+    /* Sceau « Vu » : la classe est posée une seule fois par indicateur (bien plus léger que :has) */
+    function marquerVus() {
+        document.querySelectorAll('.playedIndicator:not([data-wf-vu])').forEach(function (ind) {
+            ind.setAttribute('data-wf-vu', '');
+            var c = ind.closest('.cardImageContainer');
+            if (c) c.classList.add('wf-vu');
+        });
     }
 
     /* ---------- 3d. Clics sur « Vu » et « Favori » ---------- */
@@ -210,6 +227,7 @@
         var lecture = bouton.getAttribute('is') === 'emby-playstatebutton';
         // Le bouton garde le focus après le clic : on le relâche pour que la carte se repose
         setTimeout(function () { if (document.activeElement === bouton) bouton.blur(); }, 0);
+        delete elements[id];
         setTimeout(function () {
             if (lecture) {
                 if (bouton.classList.contains('playstatebutton-played')) {
@@ -221,7 +239,7 @@
                 var est = !!(icone && icone.classList.contains('ratingbutton-icon-withrating'));
                 if (!favoris) favoris = {};
                 if (est) favoris[id] = true; else delete favoris[id];
-                marquerFavoris();
+                marquerFavoris(true);
             }
         }, 500);
     }
@@ -240,7 +258,16 @@
 
     /* ---------- 3e. Module Sagas & Cycles ---------- */
     function chargerModules() {
-        window.WolfFlix = { VERSION: VERSION, BASE: BASE };
+        window.WolfFlix = {
+            VERSION: VERSION,
+            BASE: BASE,
+            abonner: function (fn) { abonnes.push(fn); planifier(); },
+            planifier: planifier,
+            element: element,
+            oublierElement: function (id) { delete elements[id]; },
+            utilisateur: utilisateurCourant,
+            quandCalme: quandCalme
+        };
         var config = window.WolfFlixConfig || {};
         var modules = [];
         if (config.sagas !== false) modules.push('sagas');
@@ -258,17 +285,57 @@
     }
 
     /* ---------- Surveillance légère des changements de page ---------- */
+    /* ---------- Planificateur partagé (un seul observateur pour tous les modules) ----------
+       Les changements de page déclenchent des passages groupés, au plus ~8 fois par
+       seconde, pendant les moments calmes du navigateur. */
+    var abonnes = [];
     var prevu = false;
+    var dernierPassage = 0;
+    function passage() {
+        prevu = false;
+        dernierPassage = Date.now();
+        if ((location.hash || '') !== dernierHash) route();
+        tuiles();
+        liensNav();
+        marquerVus();
+        if (favoris) marquerFavoris(); else chargerFavoris();
+        for (var i = 0; i < abonnes.length; i++) {
+            try { abonnes[i](); } catch (e) { /* un module en erreur ne bloque pas les autres */ }
+        }
+    }
     function planifier() {
         if (prevu) return;
         prevu = true;
-        requestAnimationFrame(function () {
-            prevu = false;
-            if ((location.hash || '') !== dernierHash) route();
-            tuiles();
-            liensNav();
-            if (favoris) marquerFavoris(); else chargerFavoris();
-        });
+        var attente = Math.max(0, 120 - (Date.now() - dernierPassage));
+        setTimeout(function () { requestAnimationFrame(passage); }, attente);
+    }
+
+    /* Cache partagé des éléments Jellyfin (une seule requête par fiche pour tous les modules) */
+    var elements = {};
+    function element(id) {
+        var a = api();
+        if (!a) return Promise.reject(new Error('hors connexion'));
+        if (!elements[id]) {
+            elements[id] = a.getItem(a.getCurrentUserId(), id);
+            elements[id].catch(function () { delete elements[id]; });
+        }
+        return elements[id];
+    }
+    var utilisateur = null;
+    function utilisateurCourant() {
+        var a = api();
+        if (!a) return Promise.reject(new Error('hors connexion'));
+        if (!utilisateur) {
+            utilisateur = a.getCurrentUser();
+            utilisateur.catch(function () { utilisateur = null; });
+        }
+        return utilisateur;
+    }
+    function quandCalme(fn, delai) {
+        setTimeout(function () {
+            if (window.requestIdleCallback) window.requestIdleCallback(fn, { timeout: 4000 });
+            else fn();
+        }, delai || 0);
     }
 
     /* ---------- 4. Traînée d'empreintes derrière le curseur ---------- */

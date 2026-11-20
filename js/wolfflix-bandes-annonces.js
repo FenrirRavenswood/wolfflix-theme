@@ -24,6 +24,8 @@
     html.classList.add('wf-ba-actif');
 
     var TMDB = 'https://api.themoviedb.org/3/';
+    var cleYoutube = String(config.youtube || '').trim();
+    if (/COLLE_TA_CLE/.test(cleYoutube)) cleYoutube = '';
     var trouvees = {};
 
     function api() {
@@ -42,6 +44,37 @@
             if (!r.ok) throw new Error('TMDB ' + r.status);
             return r.json();
         });
+    }
+
+    /* ---------- Recherche YouTube (optionnelle, clé API YouTube Data v3) ----------
+       Sert à trouver les bandes-annonces VF et par saison que TMDB n'a pas.
+       Chaque recherche coûte du quota (≈100 recherches/jour gratuites) : les
+       résultats sont gardés 30 jours dans le navigateur. */
+    function rechercheYoutube(q, saison) {
+        if (!cleYoutube) return Promise.resolve([]);
+        var cleCache = 'wf-yt-' + q.toLowerCase();
+        try {
+            var c = JSON.parse(localStorage.getItem(cleCache));
+            if (c && Date.now() - c.t < 30 * 86400000) return Promise.resolve(c.l);
+        } catch (e) { /* rien */ }
+        var u = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=15' +
+            '&relevanceLanguage=fr&regionCode=FR&q=' + encodeURIComponent(q) + '&key=' + encodeURIComponent(cleYoutube);
+        return fetch(u, { referrerPolicy: 'strict-origin-when-cross-origin' }).then(function (r) {
+            if (!r.ok) throw new Error('YouTube ' + r.status);
+            return r.json();
+        }).then(function (r) {
+            var exclus = /r[ée]action|react|review|critique|explained|expliqu|analyse|fan ?made|concept|parodie|recap|r[ée]sum[ée]|th[ée]orie|making|interview|clip|extrait|scene|sc[èe]ne|ending|fin expliqu/i;
+            var l = (r.items || []).map(function (it) {
+                var t = (it.snippet && it.snippet.title || '').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&quot;/g, '"');
+                if (!/bande[- ]?annonce|trailer|teaser/i.test(t) || exclus.test(t)) return null;
+                var langue = /vostfr|vost\b|sous[- ]titr/i.test(t) ? 'VOSTFR' : /\bVF\b|version fran[çc]aise|fran[çc]ais|\bFR\b/i.test(t) ? 'VF' : null;
+                if (!langue) return null;
+                var bonneSaison = saison ? new RegExp('(saison|season|\\bS)\\s*0?' + saison + '\\b', 'i').test(t) : false;
+                return { cle: it.id && it.id.videoId, langue: langue, nom: t, portee: bonneSaison ? 'saison' : 'serie', yt: true };
+            }).filter(function (v) { return v && v.cle; });
+            try { localStorage.setItem(cleCache, JSON.stringify({ t: Date.now(), l: l })); } catch (e) { /* plein */ }
+            return l;
+        }).catch(function () { return []; });
     }
 
     /* Toutes les vidéos utilisables, triées : VF d'abord, bande-annonce > teaser, officielle, récente */
@@ -70,15 +103,17 @@
             })
             .catch(function () { return []; });
     }
-    /* Toujours la VF d'abord (jusqu'à 10 vidéos), la VO seulement ensuite, en secours */
+    /* Toujours la VF d'abord (jusqu'à 10 vidéos), puis la VOSTFR, la VO seulement en dernier */
     function vfDabord(listes) {
         var tout = [].concat.apply([], listes);
         var vus = {};
         tout = tout.filter(function (v) { if (vus[v.cle]) return false; vus[v.cle] = true; return true; });
         var vf = tout.filter(function (v) { return v.langue === 'VF'; }).slice(0, 10);
+        var vost = tout.filter(function (v) { return v.langue === 'VOSTFR'; }).slice(0, 3);
         var vo = tout.filter(function (v) { return v.langue === 'VO'; }).slice(0, 5);
-        return vf.concat(vo);
+        return vf.concat(vost, vo);
     }
+    function nbVf(l) { return l.filter(function (v) { return v.langue === 'VF'; }).length; }
 
     function parExterne(id, source, champ, type) {
         return tmdb('find/' + id, { external_source: source }).then(function (r) {
@@ -106,16 +141,36 @@
         var a = api();
         var p;
         if (item.Type === 'Movie') {
-            p = idTmdb(item).then(function (c) { return c ? videos('movie/' + c.id + '/videos', 'film').then(function (l) { return vfDabord([l]); }) : []; });
+            p = idTmdb(item).then(function (c) {
+                return c ? videos('movie/' + c.id + '/videos', 'film') : [];
+            }).then(function (l) {
+                if (nbVf(l) >= 2 || !cleYoutube) return vfDabord([l]);
+                var q = item.Name + (item.ProductionYear ? ' ' + item.ProductionYear : '') + ' bande annonce VF';
+                return rechercheYoutube(q, 0).then(function (y) {
+                    y.forEach(function (v) { v.portee = 'film'; });
+                    return vfDabord([l.filter(function (v) { return v.langue === 'VF'; }), y, l]);
+                });
+            });
         } else if (item.Type === 'Series' || item.Type === 'Season' || item.Type === 'Episode') {
             var saison = item.Type === 'Series' ? 1 : item.Type === 'Season' ? item.IndexNumber : item.ParentIndexNumber;
-            var serie = item.Type === 'Series' ? Promise.resolve(item) : a.getItem(a.getCurrentUserId(), item.SeriesId);
+            var serie = item.Type === 'Series' ? Promise.resolve(item) : element(item.SeriesId);
             p = serie.then(idTmdb).then(function (c) {
-                if (!c) return [];
+                if (!c) return null;
                 var parSaison = saison > 0 ? videos('tv/' + c.id + '/season/' + saison + '/videos', 'saison') : Promise.resolve([]);
-                return Promise.all([parSaison, videos('tv/' + c.id + '/videos', 'serie')]).then(function (r) {
-                    // Ordre : VF de la saison, VF de la série, puis VO de la saison, VO de la série
-                    return vfDabord([r[0], r[1]]);
+                return Promise.all([parSaison, videos('tv/' + c.id + '/videos', 'serie')]);
+            }).then(function (r) {
+                if (!r) return [];
+                var tmdbSaisonVf = r[0].filter(function (v) { return v.langue === 'VF'; });
+                var besoinYt = cleYoutube && (tmdbSaisonVf.length === 0 || nbVf(r[0].concat(r[1])) < 2);
+                if (!besoinYt) return vfDabord([r[0], r[1]]);
+                return serie.then(function (se) {
+                    var q = se.Name + (saison > 0 ? ' saison ' + saison : '') + ' bande annonce VF';
+                    return rechercheYoutube(q, saison);
+                }).then(function (y) {
+                    var ySaison = y.filter(function (v) { return v.portee === 'saison'; });
+                    var yAutres = y.filter(function (v) { return v.portee !== 'saison'; });
+                    // Ordre : VF de la saison (TMDB puis YouTube), VF de la série, puis le reste
+                    return vfDabord([tmdbSaisonVf, ySaison, r[1].filter(function (v) { return v.langue === 'VF'; }), yAutres, r[0], r[1]]);
                 });
             });
         } else {
@@ -226,6 +281,7 @@
     var sans = {};
     function element(id) {
         var a = api();
+        if (window.WolfFlix && window.WolfFlix.element) return window.WolfFlix.element(id);
         if (!elements[id]) {
             elements[id] = a.getItem(a.getCurrentUserId(), id);
             elements[id].catch(function () { delete elements[id]; });
@@ -271,11 +327,13 @@
 
     var prevu = false;
     function passer() {
+        if (window.WolfFlix && window.WolfFlix.planifier) { window.WolfFlix.planifier(); return; }
         if (prevu) return;
         prevu = true;
         requestAnimationFrame(function () { prevu = false; fiche(); });
     }
     window.addEventListener('wf-route', passer);
-    new MutationObserver(passer).observe(document.body, { childList: true, subtree: true });
+    if (window.WolfFlix && window.WolfFlix.abonner) window.WolfFlix.abonner(fiche);
+    else new MutationObserver(passer).observe(document.body, { childList: true, subtree: true });
     passer();
 })();

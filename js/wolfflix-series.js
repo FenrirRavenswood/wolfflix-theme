@@ -62,17 +62,32 @@
     }
     function oublier(prefixes) {
         Object.keys(memo).forEach(function (k) {
-            if (prefixes.some(function (p) { return k.indexOf(p) === 0; })) delete memo[k];
+            if (prefixes.some(function (p) { return k.indexOf(p) === 0; })) {
+                delete memo[k];
+                if (k.indexOf('item-') === 0 && window.WolfFlix && window.WolfFlix.oublierElement) window.WolfFlix.oublierElement(k.slice(5));
+            }
+        });
+        prefixes.forEach(function (p) {
+            if (p.indexOf('item-') === 0 && p.length > 5 && window.WolfFlix && window.WolfFlix.oublierElement) window.WolfFlix.oublierElement(p.slice(5));
         });
     }
     function page() {
         var p = document.querySelector('#itemDetailPage:not(.hide)');
         return p && p.offsetParent !== null ? p : null;
     }
-    function element(id) { return une('item-' + id, function () { return api().getItem(uid(), id); }); }
+    function element(id) {
+        return une('item-' + id, function () {
+            return window.WolfFlix && window.WolfFlix.element ? window.WolfFlix.element(id) : api().getItem(uid(), id);
+        });
+    }
+    /* Lecture garantie fraîche (contourne tout cache du navigateur) */
+    function frais(id) {
+        return json('Items/' + id, { userId: uid(), _: Date.now() }).catch(function () { return api().getItem(uid(), id); });
+    }
     function estAdmin() {
         return une('admin', function () {
-            return api().getCurrentUser().then(function (u) { return !!(u && u.Policy && u.Policy.IsAdministrator); });
+            var u = window.WolfFlix && window.WolfFlix.utilisateur ? window.WolfFlix.utilisateur() : api().getCurrentUser();
+            return u.then(function (x) { return !!(x && x.Policy && x.Policy.IsAdministrator); });
         });
     }
     function episodes(serieId) {
@@ -162,13 +177,18 @@
     }
     function enregistrerLiens(serieId, liens) {
         var a = api();
-        return a.getItem(uid(), serieId).then(function (it) {
+        return frais(serieId).then(function (it) {
             it.Tags = (it.Tags || []).filter(function (x) { return x.indexOf('wffilms:') !== 0 && x !== 'wf-films'; });
             if (liens.length) {
                 it.Tags.push('wf-films');
                 it.Tags.push('wffilms:' + liens.map(function (l) { return l.film + '@' + l.saison + '.' + l.apres; }).join('|'));
             }
-            return a.updateItem(it);
+            var attendu = it.Tags.slice();
+            return a.updateItem(it).then(function () { return frais(serieId); }).then(function (v) {
+                var garde = (v.Tags || []).filter(function (x) { return x.indexOf('wffilms:') === 0; })[0] || '';
+                var voulu = attendu.filter(function (x) { return x.indexOf('wffilms:') === 0; })[0] || '';
+                if (garde !== voulu) throw new Error('étiquette non enregistrée');
+            });
         }).then(function () {
             oublier(['item-' + serieId, 'films-', 'suivant-', 'accueil-films']);
         });
@@ -425,7 +445,25 @@
                         '<span class="wf-film-lie-texte"><span class="wf-film-lie-etiquette"><span class="material-icons movie" aria-hidden="true"></span> Film lié</span>' +
                         '<span class="wf-film-lie-titre">' + esc(f.Name) + (f.ProductionYear ? ' <small>(' + f.ProductionYear + ')</small>' : '') + '</span>' +
                         (f.Overview ? '<span class="wf-film-lie-resume">' + esc(f.Overview) + '</span>' : '') + '</span>' +
-                        (vu ? '<span class="wf-film-lie-vu" title="Vu"></span>' : '');
+                        (vu ? '<span class="wf-film-lie-vu" title="Vu"></span>' : '') +
+                        (admin ? '<button type="button" class="wf-film-lie-retirer" data-film="' + f.Id + '" title="Délier ce film" aria-label="Délier ce film"><span class="material-icons link_off" aria-hidden="true"></span></button>' : '');
+                    var bRet = a.querySelector('.wf-film-lie-retirer');
+                    if (bRet) bRet.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        bRet.disabled = true;
+                        oublier(['item-' + serie.Id]);
+                        frais(serie.Id).then(function (sf) {
+                            var reste = liensDe(sf).filter(function (x) { return !(x.film === f.Id && x.saison === item.IndexNumber); });
+                            return enregistrerLiens(serie.Id, reste);
+                        }).then(function () {
+                            a.remove();
+                            toast('Film délié');
+                        }).catch(function () {
+                            bRet.disabled = false;
+                            toast('Impossible de délier (droits administrateur requis ?)', true);
+                        });
+                    });
                     if (repere) repere.parentNode.insertBefore(a, repere.nextSibling);
                     else if (l.apres === 0) liste.insertBefore(a, liste.firstChild);
                     else liste.appendChild(a);
@@ -501,7 +539,11 @@
             var r = e.target.closest('[data-retirer]');
             if (r) {
                 var id = r.getAttribute('data-retirer');
-                sauver(liens.filter(function (l) { return !(l.film === id && l.saison === sais.IndexNumber); }), 'Film délié');
+                oublier(['item-' + serie.Id]);
+                frais(serie.Id).then(function (sf) {
+                    liens = liensDe(sf);
+                    sauver(liens.filter(function (l) { return !(l.film === id && l.saison === sais.IndexNumber); }), 'Film délié');
+                });
                 return;
             }
             var res = e.target.closest('.wf-resultat');
@@ -594,12 +636,24 @@
 
     /* ---------- Masquer les séries sans fichier ---------- */
     var vides = null;
+    var videsPrevu = false;
     function masquerVides() {
         if (!vides) {
-            if (!memo.stats) stats().then(function (st) { vides = {}; st.vides.forEach(function (id) { vides[id] = true; }); masquerVides(); }).catch(function () { /* rien */ });
+            if (videsPrevu) return;
+            videsPrevu = true;
+            // Calcul lourd (tous les épisodes) : seulement quand le navigateur est au repos
+            var lancer = function () {
+                stats().then(function (st) {
+                    vides = {};
+                    st.vides.forEach(function (id) { vides[id] = true; });
+                    masquerVides();
+                }).catch(function () { videsPrevu = false; });
+            };
+            if (window.WolfFlix && window.WolfFlix.quandCalme) window.WolfFlix.quandCalme(lancer, 3000); else setTimeout(lancer, 3000);
             return;
         }
-        document.querySelectorAll('.card[data-type="Series"][data-id]:not(.wf-serie-vide)').forEach(function (c) {
+        document.querySelectorAll('.card[data-type="Series"][data-id]:not([data-wf-v])').forEach(function (c) {
+            c.setAttribute('data-wf-v', '');
             if (vides[c.getAttribute('data-id')]) c.classList.add('wf-serie-vide');
         });
     }
@@ -750,15 +804,17 @@
             setTimeout(function () { oublier(['episodes-', 'suivant-', 'films-', 'accueil-films']); }, 600);
         }
     }, true);
-    window.addEventListener('wf-route', function () { oublier(['suivant-', 'episodes-', 'films-', 'accueil-films']); });
+    window.addEventListener('wf-route', function () { oublier(['suivant-', 'episodes-', 'films-', 'accueil-films', 'item-']); });
 
     var prevu = false;
     function planifier() {
+        if (window.WolfFlix && window.WolfFlix.planifier) { window.WolfFlix.planifier(); return; }
         if (prevu) return;
         prevu = true;
         requestAnimationFrame(function () { prevu = false; passer(); });
     }
     window.addEventListener('wf-route', planifier);
-    new MutationObserver(planifier).observe(document.body, { childList: true, subtree: true });
+    if (window.WolfFlix && window.WolfFlix.abonner) window.WolfFlix.abonner(passer);
+    else new MutationObserver(planifier).observe(document.body, { childList: true, subtree: true });
     planifier();
 })();

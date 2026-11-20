@@ -198,7 +198,7 @@
 }
 
 /* Affiche de la fiche : sceau en grand quand le titre est vu */
-.detailImageContainer .cardImageContainer:has(.playedIndicator)::after {
+.detailImageContainer .cardImageContainer.wf-vu::after {
     width: 34%;
     max-width: 140px;
 }

@@ -942,3 +942,34 @@ html.wf-modale-ouverte body {
 .wf-section-bib-cycles {
     margin-bottom: 1em;
 }
+
+/* ---------- v1.3 : choix Saga / Cycle dans l'éditeur ---------- */
+.wf-type-choix {
+    display: inline-flex;
+    padding: 2px;
+    border: 1px solid rgba(167, 176, 186, 0.3);
+    border-radius: 999px;
+    background: #111114;
+}
+
+.wf-type-choix button {
+    padding: 0.25em 0.9em;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--wf-acier, #A7B0BA);
+    font-family: var(--wf-titre, serif);
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    transition: background var(--wf-rapide, 160ms), color var(--wf-rapide, 160ms);
+}
+
+.wf-type-choix button.wf-actif {
+    background: linear-gradient(180deg, #B92B36, #8A1D26);
+    color: #FFF;
+}
+
+.wf-seulement-cycle[hidden],
+.wf-lien-mini[hidden] {
+    display: none !important;
+}
