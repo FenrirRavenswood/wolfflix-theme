@@ -179,16 +179,34 @@
     100% { transform: scale(1); }
 }
 
-/* Vu : la coche se pose d'un coup de sceau */
-.playstatebutton-icon-played {
-    color: #D5DBE1 !important;
-    animation: wf-sceau 0.55s cubic-bezier(.2, 1.4, .4, 1);
+/* Vu : le bouton est frappé du sceau de cire WolfFlix */
+.mainDetailButtons .btnPlaystate.playstatebutton-played {
+    background: url("../assets/img/sceau-vu.webp") center / 118% no-repeat !important;
+    border-color: transparent !important;
+    animation: wf-sceau 0.55s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+
+.mainDetailButtons .btnPlaystate.playstatebutton-played .material-icons {
+    color: #FFFFFF !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 @keyframes wf-sceau {
     0% { transform: scale(1.9) rotate(-20deg); opacity: 0; }
     60% { transform: scale(0.92) rotate(-6deg); opacity: 1; }
-    100% { transform: scale(1) rotate(0); opacity: 1; }
+    100% { transform: scale(1) rotate(-8deg); opacity: 1; }
+}
+
+/* Affiche de la fiche : sceau en grand quand le titre est vu */
+.detailImageContainer .playedIndicator {
+    width: 4.2em !important;
+    height: 4.2em !important;
+}
+
+/* Titre et infos alignés à gauche, sous le bandeau */
+.detailRibbon .infoWrapper,
+.detailRibbon .nameContainer {
+    text-align: left;
 }
 
 /* ---------- Menus audio / sous-titres / version ---------- */

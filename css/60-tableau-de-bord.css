@@ -1,0 +1,133 @@
+/* =====================================================================
+   WolfFlix — Module 60 : Tableau de bord (administration)
+   Jellyfin ne charge pas le CSS personnalisé dans le tableau de bord :
+   ce fichier y est ajouté par le script wolfflix-core.js (JavaScript Injector).
+   Volontairement sobre : couleurs, polices, blason. Aucune mise en page modifiée,
+   pour que l'administration reste toujours utilisable.
+   ===================================================================== */
+
+/* Menu latéral */
+html.wf-tableau .MuiDrawer-paper {
+    background: linear-gradient(180deg, #111114, #0A0A0C) !important;
+    border-right: 1px solid rgba(167, 176, 186, 0.14) !important;
+}
+
+html.wf-tableau .MuiDrawer-paper .MuiListSubheader-root {
+    background: transparent;
+    font-family: var(--wf-titre);
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    color: #8F949B;
+}
+
+html.wf-tableau .MuiDrawer-paper .MuiListItemButton-root {
+    border-left: 2px solid transparent;
+    transition: background var(--wf-rapide, 160ms), border-color var(--wf-rapide, 160ms);
+}
+
+html.wf-tableau .MuiDrawer-paper .MuiListItemButton-root:hover {
+    background: rgba(167, 176, 186, 0.06);
+}
+
+html.wf-tableau .MuiDrawer-paper .MuiListItemButton-root.Mui-selected,
+html.wf-tableau .MuiDrawer-paper .MuiListItemButton-root.Mui-selected:hover {
+    background: rgba(163, 35, 46, 0.18) !important;
+    border-left-color: #C73441;
+}
+
+html.wf-tableau .MuiDrawer-paper .MuiListItemIcon-root {
+    color: #A7B0BA;
+}
+
+html.wf-tableau .MuiDrawer-paper .Mui-selected .MuiListItemIcon-root {
+    color: #C73441;
+}
+
+/* Blason à la place de l'icône Jellyfin, en haut du menu */
+html.wf-tableau .MuiDrawer-paper a[href="#/"] .MuiListItemIcon-root {
+    min-height: 48px;
+    background: url("../assets/img/blason-256.webp") left center / contain no-repeat;
+}
+
+html.wf-tableau .MuiDrawer-paper a[href="#/"] .MuiListItemIcon-root img {
+    opacity: 0;
+}
+
+html.wf-tableau .MuiDrawer-paper a[href="#/"] .MuiTypography-h6 {
+    font-family: var(--wf-titre);
+    letter-spacing: 0.03em;
+}
+
+/* Barre du haut du tableau de bord */
+html.wf-tableau .MuiAppBar-root {
+    background: #0A0A0C !important;
+    box-shadow: 0 1px 0 rgba(167, 176, 186, 0.12) !important;
+}
+
+/* Cartes et panneaux */
+html.wf-tableau .MuiPaper-root:not(.MuiDrawer-paper):not(.MuiAppBar-root):not(.MuiMenu-paper),
+html.wf-tableau .MuiCard-root {
+    background: #141418 !important;
+    border: 1px solid rgba(167, 176, 186, 0.14);
+}
+
+/* Titres de sections */
+html.wf-tableau .MuiTypography-h5,
+html.wf-tableau .MuiTypography-h6,
+html.wf-tableau .MuiTypography-h4 {
+    font-family: var(--wf-titre);
+    letter-spacing: 0.02em;
+}
+
+/* Boutons : le bleu Jellyfin devient rouge sang, l'acier pour le reste */
+html.wf-tableau .MuiButton-containedPrimary {
+    background: #A3232E !important;
+    color: #F4F1EC !important;
+}
+
+html.wf-tableau .MuiButton-containedPrimary:hover {
+    background: #B42A36 !important;
+}
+
+html.wf-tableau .MuiButton-containedError {
+    background: #5E1219 !important;
+    border: 1px solid #C73441;
+}
+
+/* Pastilles d'activité et barres d'espace disque */
+html.wf-tableau .MuiAvatar-root {
+    background: #5E1219 !important;
+    color: #F4F1EC !important;
+}
+
+html.wf-tableau .MuiLinearProgress-root {
+    background: #222229 !important;
+}
+
+html.wf-tableau .MuiLinearProgress-bar {
+    background: linear-gradient(90deg, #6E111A, #C73441) !important;
+}
+
+/* Tuile d'appareil (bleu Jellyfin → acier) */
+html.wf-tableau .MuiCardMedia-root,
+html.wf-tableau .MuiCardActionArea-root {
+    background-color: #18181D !important;
+}
+
+/* Champs de saisie */
+html.wf-tableau .MuiFilledInput-root,
+html.wf-tableau .MuiOutlinedInput-root {
+    background: #111114;
+}
+
+html.wf-tableau .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline,
+html.wf-tableau .MuiFilledInput-root.Mui-focused::after {
+    border-color: #C73441 !important;
+}
+
+/* Pages de configuration des plugins (anciennes pages) */
+html.wf-tableau .raised.button-submit,
+html.wf-tableau .emby-button.raised.button-submit {
+    background: #A3232E !important;
+    color: #F4F1EC !important;
+}
