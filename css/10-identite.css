@@ -1,0 +1,162 @@
+/* =====================================================================
+   WolfFlix — Module 10 : Identité
+   Blason dans l'en-tête, blason sur la page de connexion,
+   loup qui court à la place du rond de chargement, fond de page.
+   Cible : Jellyfin Web 12.4. CSS seul.
+   Désactiver : commenter la ligne @import de ce fichier.
+   ===================================================================== */
+
+/* ---------- Fond de page : noir avec un léger halo sang et acier ---------- */
+body {
+    background-color: #0A0A0C;
+    background-image:
+        radial-gradient(60% 45% at 15% 0%, rgba(94, 18, 25, 0.28), rgba(94, 18, 25, 0) 70%),
+        radial-gradient(45% 40% at 92% 6%, rgba(38, 43, 52, 0.35), rgba(38, 43, 52, 0) 70%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+/* ---------- Blason dans la barre du haut (interface Modern) ----------
+   Le bouton du serveur est le lien vers l'accueil (#/) dans la barre MUI.
+   On masque l'icône Jellyfin et le nom, et on affiche le blason. */
+.MuiToolbar-root a.MuiButton-root[href="#/"] {
+    position: relative;
+    min-width: 0;
+    width: 64px;
+    height: 56px;
+    margin: -4px 8px -4px 0;
+    padding: 0;
+    font-size: 0 !important;
+    color: transparent !important;
+    background: transparent !important;
+    overflow: visible;
+}
+
+.MuiToolbar-root a.MuiButton-root[href="#/"] .MuiButton-startIcon {
+    display: none;
+}
+
+.MuiToolbar-root a.MuiButton-root[href="#/"]::before {
+    content: "";
+    position: absolute;
+    inset: -6px 0;
+    background: url("../assets/img/blason-256.webp") center / contain no-repeat;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.65));
+    transition: transform var(--wf-normal, 320ms) var(--wf-courbe, ease), filter var(--wf-normal, 320ms);
+}
+
+.MuiToolbar-root a.MuiButton-root[href="#/"]:hover::before,
+.MuiToolbar-root a.MuiButton-root[href="#/"]:focus-visible::before {
+    transform: scale(1.07);
+    filter: drop-shadow(0 4px 14px rgba(163, 35, 46, 0.55));
+}
+
+.MuiToolbar-root a.MuiButton-root[href="#/"] .MuiTouchRipple-root {
+    display: none;
+}
+
+/* Ancienne barre (pages restées en « legacy ») */
+.pageTitleWithDefaultLogo {
+    background-image: url("../assets/img/blason-256.webp") !important;
+    background-size: contain !important;
+    background-position: left center !important;
+    min-width: 56px;
+    height: 52px !important;
+}
+
+/* Mobile : blason plus compact */
+@media (max-width: 599px) {
+    .MuiToolbar-root a.MuiButton-root[href="#/"] {
+        width: 48px;
+        height: 44px;
+        margin-right: 4px;
+    }
+
+    .MuiToolbar-root a.MuiButton-root[href="#/"]::before {
+        inset: -4px 0;
+    }
+}
+
+/* ---------- Page de connexion : grand blason ---------- */
+#loginPage > .padded-left::before,
+.selectServerPage > .padded-left::before {
+    content: "";
+    display: block;
+    width: min(300px, 62vw);
+    aspect-ratio: 1183 / 1229;
+    margin: 1.5em auto 1em;
+    background: url("../assets/img/blason-640.webp") center / contain no-repeat;
+    filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.7));
+    animation: wf-apparition 1.1s var(--wf-courbe, ease) both;
+}
+
+#loginPage .sectionTitle {
+    font-family: var(--wf-titre);
+    letter-spacing: 0.04em;
+}
+
+@keyframes wf-apparition {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ---------- Chargement : le loup qui court ----------
+   Le rond de Jellyfin (.docspinner) devient le loup animé. */
+.docspinner.mdl-spinner {
+    width: 121px;
+    height: 58px;
+    margin-left: -60px;
+    margin-top: -29px;
+}
+
+.docspinner .mdl-spinner__layer {
+    display: none !important;
+}
+
+.docspinner.mdlSpinnerActive {
+    display: block;
+    animation: wf-course 0.48s steps(4) infinite;
+    background: url("../assets/img/loup-course.webp") 0 0 / 484px 58px no-repeat;
+    filter: drop-shadow(0 0 8px rgba(199, 52, 65, 0.45));
+}
+
+.docspinner.mdlSpinnerActive::after {
+    content: "Chargement";
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 10px);
+    transform: translateX(-50%);
+    font-family: var(--wf-titre);
+    font-size: 16px;
+    letter-spacing: 0.06em;
+    color: rgba(233, 230, 225, 0.75);
+    white-space: nowrap;
+    animation: wf-pulsation 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes wf-course {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: -484px 0;
+    }
+}
+
+@keyframes wf-pulsation {
+    from {
+        opacity: 0.5;
+    }
+
+    to {
+        opacity: 1;
+    }
+}

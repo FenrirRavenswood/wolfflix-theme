@@ -1,0 +1,240 @@
+/* =====================================================================
+   WolfFlix — Module 00 : Fondations
+   Palette Sang et acier, polices, curseurs, barre de défilement,
+   sélection de texte, préférence « moins d'animations ».
+   Cible : Jellyfin Web 12.4 (interface Modern). CSS seul.
+   Désactiver : commenter la ligne @import de ce fichier.
+   ===================================================================== */
+
+/* ---------- Polices (licence SIL OFL, voir /fonts) ---------- */
+@font-face {
+    font-family: "IM Fell English SC";
+    src: url("../fonts/im-fell-english-sc-400.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Spectral";
+    src: url("../fonts/spectral-400-normal.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Spectral";
+    src: url("../fonts/spectral-400-italic.woff2") format("woff2");
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Spectral";
+    src: url("../fonts/spectral-600-normal.woff2") format("woff2");
+    font-weight: 500 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ---------- Jetons WolfFlix + variables de Jellyfin ----------
+   Jellyfin 12 expose ses couleurs en variables --jf-palette-*.
+   html[data-theme] est plus précis que [data-theme="dark"] :
+   la palette s'applique quel que soit le thème choisi par l'utilisateur. */
+html,
+html[data-theme] {
+    /* Jetons du thème */
+    --wf-noir: #0A0A0C;
+    --wf-surface: #111114;
+    --wf-surface-2: #18181D;
+    --wf-surface-3: #222229;
+    --wf-ligne: rgba(167, 176, 186, 0.16);
+    --wf-texte: #E9E6E1;
+    --wf-texte-2: rgba(233, 230, 225, 0.70);
+    --wf-texte-3: #8F949B;
+    --wf-sang: #A3232E;
+    --wf-sang-vif: #C73441;
+    --wf-sang-sombre: #5E1219;
+    --wf-acier: #A7B0BA;
+    --wf-acier-clair: #D5DBE1;
+    --wf-titre: "IM Fell English SC", Georgia, serif;
+    --wf-texte-police: "Spectral", Georgia, "Times New Roman", serif;
+    --wf-courbe: cubic-bezier(.2, .7, .2, 1);
+    --wf-rapide: 160ms;
+    --wf-normal: 320ms;
+    --wf-lent: 700ms;
+    --wf-curseur: url("../assets/curseurs/curseur-32.png") 1 1, auto;
+    --wf-curseur-lien: url("../assets/curseurs/curseur-lien-32.png") 1 1, pointer;
+    --wf-curseur-attente: url("../assets/curseurs/curseur-attente-32.png") 16 16, progress;
+
+    /* Palette Jellyfin (MUI) */
+    --jf-palette-background-default: #0A0A0C;
+    --jf-palette-background-defaultChannel: 10 10 12;
+    --jf-palette-background-paper: #141418;
+    --jf-palette-background-paperChannel: 20 20 24;
+    --jf-palette-primary-main: #A3232E;
+    --jf-palette-primary-mainChannel: 163 35 46;
+    --jf-palette-primary-dark: #5E1219;
+    --jf-palette-primary-light: #C73441;
+    --jf-palette-primary-contrastText: #F4F1EC;
+    --jf-palette-secondary-main: #A7B0BA;
+    --jf-palette-secondary-mainChannel: 167 176 186;
+    --jf-palette-secondary-contrastText: #0A0A0C;
+    --jf-palette-text-primary: #E9E6E1;
+    --jf-palette-text-primaryChannel: 233 230 225;
+    --jf-palette-text-secondary: rgba(233, 230, 225, 0.70);
+    --jf-palette-divider: rgba(167, 176, 186, 0.16);
+    --jf-palette-action-hover: rgba(167, 176, 186, 0.08);
+    --jf-palette-action-focus: rgba(199, 52, 65, 0.22);
+    --jf-palette-AppBar-defaultBg: #0A0A0C;
+    --jf-palette-AppBar-transparentBg: rgba(10, 10, 12, 0.55);
+    --jf-palette-AppBar-gradient: none;
+    --jf-card-borderRadius: 4px;
+
+    background-color: #0A0A0C;
+    color-scheme: dark;
+}
+
+/* ---------- Typographie ---------- */
+html,
+body,
+button,
+input,
+select,
+textarea,
+.MuiTypography-root,
+.MuiButtonBase-root,
+.MuiInputBase-root,
+.MuiMenuItem-root {
+    font-family: var(--wf-texte-police);
+}
+
+html {
+    font-size: 96%;
+}
+
+body {
+    letter-spacing: 0.005em;
+}
+
+h1,
+h2,
+.sectionTitle,
+.itemName,
+.MuiTypography-h1,
+.MuiTypography-h2,
+.MuiTypography-h3,
+.MuiTypography-h4 {
+    font-family: var(--wf-titre);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+/* Les icônes doivent garder leur police */
+.material-icons,
+.material-symbols-outlined,
+[class*="material-icons"] {
+    font-family: "Material Icons", "Material Icons Round", "Material Symbols Outlined";
+}
+
+/* ---------- Curseurs (ordinateur uniquement) ---------- */
+@media (hover: hover) and (pointer: fine) {
+    html,
+    body {
+        cursor: url("../assets/curseurs/curseur-32.png") 1 1, auto;
+        cursor: image-set(url("../assets/curseurs/curseur-32.png") 1x, url("../assets/curseurs/curseur-64.png") 2x) 1 1, auto;
+    }
+
+    a,
+    button,
+    select,
+    label,
+    summary,
+    [role="button"],
+    [role="tab"],
+    [role="menuitem"],
+    .emby-button,
+    .MuiButtonBase-root,
+    .cardImageContainer,
+    .cardContent-button,
+    .itemAction,
+    .listItem-button,
+    input[type="checkbox"],
+    input[type="range"] {
+        cursor: url("../assets/curseurs/curseur-lien-32.png") 1 1, pointer;
+        cursor: image-set(url("../assets/curseurs/curseur-lien-32.png") 1x, url("../assets/curseurs/curseur-lien-64.png") 2x) 1 1, pointer;
+    }
+
+    input[type="text"],
+    input[type="search"],
+    input[type="password"],
+    input[type="email"],
+    input[type="number"],
+    input[type="url"],
+    textarea,
+    [contenteditable="true"] {
+        cursor: text;
+    }
+
+    html.wf-occupe,
+    html.wf-occupe body,
+    .mdlSpinnerActive {
+        cursor: url("../assets/curseurs/curseur-attente-32.png") 16 16, progress;
+        cursor: image-set(url("../assets/curseurs/curseur-attente-32.png") 1x, url("../assets/curseurs/curseur-attente-64.png") 2x) 16 16, progress;
+    }
+}
+
+/* ---------- Barre de défilement en acier ---------- */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #5E1219 #0D0D10;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0D0D10;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #6E111A, #A3232E);
+    border: 2px solid #0D0D10;
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #C73441;
+}
+
+::-webkit-scrollbar-corner {
+    background: #0D0D10;
+}
+
+/* ---------- Sélection de texte ---------- */
+::selection {
+    background: rgba(163, 35, 46, 0.85);
+    color: #FFFFFF;
+}
+
+/* ---------- Liens et focus ---------- */
+a {
+    transition: color var(--wf-rapide) ease;
+}
+
+:focus-visible {
+    outline-color: #C73441;
+}
+
+/* ---------- Moins d'animations si l'utilisateur le demande ---------- */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+    }
+}
