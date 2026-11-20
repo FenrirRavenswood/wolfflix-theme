@@ -291,7 +291,7 @@
         var lots = [];
         for (var i = 0; i < episodesSuivis.length; i += 80) lots.push(episodesSuivis.slice(i, i + 80));
         return Promise.all([
-            json('Users/' + uid() + '/Items', Object.assign({ IncludeItemTypes: 'Movie,Series,Season,Video', Filters: 'IsPlayed', SortBy: 'DatePlayed', SortOrder: 'Descending' }, q)),
+            json('Users/' + uid() + '/Items', Object.assign({}, q, { IncludeItemTypes: 'Movie,Series,Season,Video', Filters: 'IsPlayed', SortBy: 'DatePlayed', SortOrder: 'Descending', EnableUserData: true })),
             json('Users/' + uid() + '/Items', Object.assign({ IncludeItemTypes: 'Movie,Video,Episode', Filters: 'IsResumable', SortBy: 'DatePlayed', SortOrder: 'Descending', Fields: 'SeriesId' }, q)),
             json('Shows/NextUp', { UserId: uid(), Limit: 200, Fields: 'SeriesId', EnableImages: false, EnableUserData: false }).catch(function () { return { Items: [] }; }),
             Promise.all(lots.map(function (l) {
@@ -302,25 +302,37 @@
             var vu = {};
             var rang = {};
             var enCours = {};
-            (r[0].Items || []).forEach(function (i, k) { vu[i.Id] = true; if (!(i.Id in rang)) rang[i.Id] = k + 1000; });
+            (r[0].Items || []).forEach(function (i, k) {
+                // Double vérification : seulement ce qui est réellement marqué « vu »
+                if (i.UserData && i.UserData.Played === false) return;
+                vu[i.Id] = true;
+                if (!(i.Id in rang)) rang[i.Id] = k + 1000;
+            });
             [].concat.apply([], r[3]).forEach(function (i, k) {
                 if (i.UserData && i.UserData.Played) { vu[i.Id] = true; if (!(i.Id in rang)) rang[i.Id] = k + 1100; }
             });
             (r[1].Items || []).forEach(function (i, k) {
-                var id = i.SeriesId || i.Id;
-                enCours[id] = true;
-                if (!(id in rang) || rang[id] > k) rang[id] = k;
+                [i.Id, i.SeriesId, i.SeasonId].forEach(function (id) {
+                    if (!id) return;
+                    enCours[id] = true;
+                    if (!(id in rang) || rang[id] > k) rang[id] = k;
+                });
             });
             (r[2].Items || []).forEach(function (i, k) {
-                if (!i.SeriesId) return;
-                enCours[i.SeriesId] = true;
-                if (!(i.SeriesId in rang) || rang[i.SeriesId] > k + 500) rang[i.SeriesId] = k + 500;
+                [i.SeriesId, i.SeasonId].forEach(function (id) {
+                    if (!id) return;
+                    enCours[id] = true;
+                    if (!(id in rang) || rang[id] > k + 500) rang[id] = k + 500;
+                });
             });
 
             var choix = [];
             collections.forEach(function (c) {
                 var ids = c.ids;
                 if (ids.length < 2) return;
+                // Un cycle n'est « commencé » que si son PREMIER titre est vu ou en cours
+                // (regarder une série du cycle de son côté ne suffit pas)
+                if (c.type === 'c' && !(vu[ids[0]] || enCours[ids[0]])) return;
                 var dernierVu = -1;
                 var recent = Infinity;
                 var prochain = null;

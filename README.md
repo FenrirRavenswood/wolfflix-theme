@@ -29,19 +29,19 @@ Thème personnel pour l'interface web de Jellyfin 12.4 : dark fantasy, palette s
 Copier tout ce bloc, coller, **Enregistrer** :
 
 ```css
-/* WolfFlix — thème Sang et acier — v1.3.2
+/* WolfFlix — thème Sang et acier — v1.4.0
    À coller dans : Tableau de bord → Général → Code CSS personnalisé
    Pour désactiver un module : mettre sa ligne en commentaire (barre oblique + étoile avant, étoile + barre oblique après). */
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.3.2/css/00-fondations.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.3.2/css/10-identite.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.3.2/css/20-navigation.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.3.2/css/30-accueil.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.3.2/css/40-fiches.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.3.2/css/50-lecteur.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.3.2/css/70-sagas.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.3.2/css/80-bandes-annonces.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.3.2/css/90-series.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.3.2/css/95-finitions.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/css/00-fondations.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/css/10-identite.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/css/20-navigation.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/css/30-accueil.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/css/40-fiches.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/css/50-lecteur.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/css/70-sagas.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/css/80-bandes-annonces.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/css/90-series.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/css/95-finitions.css");
 ```
 
 ### 2. JavaScript — Tableau de bord → JS Injector
@@ -67,7 +67,7 @@ window.WolfFlixConfig = {
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.3.2/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();
@@ -95,7 +95,7 @@ Ctrl + F5 sur ordinateur ; sur téléphone, fermer et rouvrir l'onglet.
 
 - **Un module** : mettre sa ligne en commentaire, par exemple
   `/* @import url(".../10-identite.css"); */`
-- **Revenir à une version précédente** : remplacer le numéro (`@v1.3.2`) par l'ancien, dans le CSS et dans le script JS Injector.
+- **Revenir à une version précédente** : remplacer le numéro (`@v1.4.0`) par l'ancien, dans le CSS et dans le script JS Injector.
 - **Tout le thème** : vider le champ Code CSS personnalisé, ou y recoller l'ancienne sauvegarde.
 - **Le module JavaScript** : décocher « Enabled » sur le script dans JS Injector.
 - **Pour un seul utilisateur** : Paramètres → Affichage → « Désactiver le code CSS personnalisé fourni par le serveur ».

@@ -114,9 +114,37 @@
         });
     }
 
-    function rechercheYoutube(q, saison) {
+    /* Texte comparable : minuscules, sans accents ni ponctuation */
+    function normal(t) {
+        return ' ' + String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+            .replace(/&/g, ' et ').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+    }
+    /* Le résultat doit vraiment parler de CE titre (et pas d'un autre film/série) */
+    function correspond(titreVideo, noms, annee, saison) {
+        var t = normal(titreVideo);
+        var ok = noms.some(function (n) {
+            var x = normal(n).trim();
+            return x.length >= 2 && t.indexOf(' ' + x + ' ') !== -1;
+        });
+        if (!ok) return false;
+        // Une autre année bien précise = probablement un remake ou un autre film
+        if (annee) {
+            var annees = (t.match(/ (19|20)\d\d /g) || []).map(function (y) { return +y.trim(); });
+            if (annees.length && !annees.some(function (y) { return Math.abs(y - annee) <= 1; })) return false;
+        }
+        // Une autre saison bien précise = pas la bonne vidéo
+        if (saison) {
+            var m = t.match(/ (saison|season|s) ?0?(\d{1,2}) /);
+            if (m && +m[2] !== saison) return false;
+        }
+        return true;
+    }
+
+    function rechercheYoutube(q, saison, noms, annee) {
         if (config.rechercheYoutube === false) return Promise.resolve([]);
-        var cleCache = 'wf-yt-' + q.toLowerCase();
+        noms = (noms || []).filter(function (n) { return n && normal(n).trim().length >= 2; });
+        if (!noms.length) return Promise.resolve([]);
+        var cleCache = 'wf-yt2-' + q.toLowerCase();
         try {
             var c = JSON.parse(localStorage.getItem(cleCache));
             if (c && Date.now() - c.t < 30 * 86400000) return Promise.resolve(c.l);
@@ -127,6 +155,7 @@
             var l = brut.map(function (v) {
                 var t = v.titre;
                 if (!/bande[- ]?annonce|trailer|teaser/i.test(t) || exclus.test(t)) return null;
+                if (!correspond(t, noms, annee, saison)) return null;
                 var langue = /vostfr|vost\b|sous[- ]titr/i.test(t) ? 'VOSTFR' : /\bVF\b|version fran[çc]aise|fran[çc]ais|\bFR\b/i.test(t) ? 'VF' : null;
                 if (!langue) return null;
                 var bonneSaison = saison ? new RegExp('(saison|season|\\bS)\\s*0?' + saison + '\\b', 'i').test(t) : false;
@@ -208,7 +237,7 @@
             }).then(function (l) {
                 if (nbVf(l) >= 2) return vfDabord([l]);
                 var q = item.Name + (item.ProductionYear ? ' ' + item.ProductionYear : '') + ' bande annonce VF';
-                return rechercheYoutube(q, 0).then(function (y) {
+                return rechercheYoutube(q, 0, [item.Name, item.OriginalTitle], item.ProductionYear).then(function (y) {
                     y.forEach(function (v) { v.portee = 'film'; });
                     return vfDabord([l.filter(function (v) { return v.langue === 'VF'; }), y, l]);
                 });
@@ -227,7 +256,7 @@
                 if (!besoinYt) return vfDabord([r[0], r[1]]);
                 return serie.then(function (se) {
                     var q = se.Name + (saison > 0 ? ' saison ' + saison : '') + ' bande annonce VF';
-                    return rechercheYoutube(q, saison);
+                    return rechercheYoutube(q, saison, [se.Name, se.OriginalTitle], 0);
                 }).then(function (y) {
                     var ySaison = y.filter(function (v) { return v.portee === 'saison'; });
                     var yAutres = y.filter(function (v) { return v.portee !== 'saison'; });
