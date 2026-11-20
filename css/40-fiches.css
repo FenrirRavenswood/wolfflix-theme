@@ -198,9 +198,9 @@
 }
 
 /* Affiche de la fiche : sceau en grand quand le titre est vu */
-.detailImageContainer .playedIndicator {
-    width: 4.2em !important;
-    height: 4.2em !important;
+.detailImageContainer .cardImageContainer:has(.playedIndicator)::after {
+    width: 34%;
+    max-width: 140px;
 }
 
 /* Titre et infos alignés à gauche, sous le bandeau */

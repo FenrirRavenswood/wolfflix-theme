@@ -136,32 +136,76 @@ h2,
     font-family: "Material Icons", "Material Icons Round", "Material Symbols Outlined";
 }
 
-/* ---------- Curseurs (ordinateur uniquement) ---------- */
+/* ---------- Curseurs (ordinateur uniquement) ----------
+   Les « !important » sont nécessaires : Jellyfin pose « cursor: pointer »
+   sur de nombreux éléments (cartes, boutons, onglets, curseurs de réglage…). */
 @media (hover: hover) and (pointer: fine) {
     html,
-    body {
+    body,
+    :where(body *) {
         cursor: url("../assets/curseurs/curseur-32.png") 1 1, auto;
         cursor: image-set(url("../assets/curseurs/curseur-32.png") 1x, url("../assets/curseurs/curseur-64.png") 2x) 1 1, auto;
     }
 
     a,
+    a *,
     button,
+    button *,
     select,
     label,
     summary,
     [role="button"],
+    [role="button"] *,
     [role="tab"],
     [role="menuitem"],
+    [role="option"],
+    [role="slider"],
+    [data-role="button"],
+    [is="emby-button"],
+    [is="emby-linkbutton"],
+    [is="paper-icon-button-light"],
     .emby-button,
-    .MuiButtonBase-root,
+    .emby-button *,
+    .button-link,
+    .emby-tab-button,
+    .paper-icon-button-light,
+    .paper-icon-button-light *,
+    .textActionButton,
+    .clearButton,
+    .alphaPickerButton,
+    .emby-checkbox-label,
+    .mdl-radio__label,
+    .mdl-switch__label,
+    .mdl-switch__track,
+    .mdl-slider,
+    .skip-button,
+    .nowPlayingBar,
+    .dynamicLyric,
+    .guide-channelHeaderCell,
+    .guide-channelTimeslotHeader,
+    .programCell,
+    .card,
+    .card *,
+    .cardContent,
     .cardImageContainer,
     .cardContent-button,
     .itemAction,
     .listItem-button,
+    .listItem:not([data-action="none"]),
+    .MuiButtonBase-root,
+    .MuiButtonBase-root *,
+    .MuiTab-root,
+    .MuiMenuItem-root,
+    .MuiListItemButton-root,
+    .MuiChip-clickable,
+    .MuiSwitch-root,
+    .MuiCheckbox-root,
+    .MuiSlider-root,
     input[type="checkbox"],
+    input[type="radio"],
     input[type="range"] {
-        cursor: url("../assets/curseurs/curseur-lien-32.png") 1 1, pointer;
-        cursor: image-set(url("../assets/curseurs/curseur-lien-32.png") 1x, url("../assets/curseurs/curseur-lien-64.png") 2x) 1 1, pointer;
+        cursor: url("../assets/curseurs/curseur-lien-32.png") 1 1, pointer !important;
+        cursor: image-set(url("../assets/curseurs/curseur-lien-32.png") 1x, url("../assets/curseurs/curseur-lien-64.png") 2x) 1 1, pointer !important;
     }
 
     input[type="text"],
@@ -170,16 +214,36 @@ h2,
     input[type="email"],
     input[type="number"],
     input[type="url"],
+    input[type="tel"],
     textarea,
+    .MuiInputBase-input,
     [contenteditable="true"] {
-        cursor: text;
+        cursor: text !important;
+    }
+
+    .toast,
+    .listItem[data-action="none"],
+    .detailsGroupItem .label,
+    .selectLabel {
+        cursor: url("../assets/curseurs/curseur-32.png") 1 1, auto !important;
+        cursor: image-set(url("../assets/curseurs/curseur-32.png") 1x, url("../assets/curseurs/curseur-64.png") 2x) 1 1, auto !important;
     }
 
     html.wf-occupe,
     html.wf-occupe body,
     .mdlSpinnerActive {
-        cursor: url("../assets/curseurs/curseur-attente-32.png") 16 16, progress;
-        cursor: image-set(url("../assets/curseurs/curseur-attente-32.png") 1x, url("../assets/curseurs/curseur-attente-64.png") 2x) 16 16, progress;
+        cursor: url("../assets/curseurs/curseur-attente-32.png") 16 16, progress !important;
+        cursor: image-set(url("../assets/curseurs/curseur-attente-32.png") 1x, url("../assets/curseurs/curseur-attente-64.png") 2x) 16 16, progress !important;
+    }
+
+    /* Lecture vidéo : laisser Jellyfin cacher la souris quand elle ne bouge plus */
+    .transparentDocument .mouseIdle,
+    .transparentDocument .mouseIdle *,
+    .screensaver-noScroll.mouseIdle,
+    .screensaver-noScroll.mouseIdle *,
+    .layout-tv .mouseIdle,
+    .layout-tv .mouseIdle * {
+        cursor: none !important;
     }
 }
 

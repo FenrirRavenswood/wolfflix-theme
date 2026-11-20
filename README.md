@@ -21,12 +21,12 @@ Dans Jellyfin : **Tableau de bord → Général → Code CSS personnalisé**, co
 
 ```css
 /* WolfFlix — thème Sang et acier */
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.0/css/00-fondations.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.0/css/10-identite.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.0/css/20-navigation.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.0/css/30-accueil.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.0/css/40-fiches.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.0/css/50-lecteur.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.1/css/00-fondations.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.1/css/10-identite.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.1/css/20-navigation.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.1/css/30-accueil.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.1/css/40-fiches.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.1/css/50-lecteur.css");
 ```
 
 Puis **Enregistrer**, et recharger la page (Ctrl + F5).
@@ -42,7 +42,7 @@ Puis **Enregistrer**, et recharger la page (Ctrl + F5).
 
 - **Un module** : mettre sa ligne en commentaire, par exemple
   `/* @import url(".../10-identite.css"); */`
-- **Revenir à une version précédente** : remplacer `@v0.3.0` par l'ancienne version dans les lignes `@import`.
+- **Revenir à une version précédente** : remplacer `@v0.3.1` par l'ancienne version dans les lignes `@import`.
 - **Tout le thème** : vider le champ Code CSS personnalisé, ou y recoller l'ancienne sauvegarde.
 - **Le module JavaScript** : décocher « Enabled » sur le script dans JS Injector.
 - **Pour un seul utilisateur** : Paramètres → Affichage → « Désactiver le code CSS personnalisé fourni par le serveur ».

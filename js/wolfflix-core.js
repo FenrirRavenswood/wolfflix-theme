@@ -14,7 +14,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v0.3.0';
+    var VERSION = 'v0.3.1';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -61,8 +61,10 @@
         });
     }
 
+    var dernierHash = null;
     function route() {
         var h = location.hash || '';
+        dernierHash = h;
         var tableau = /^#\/(dashboard|metadata|configurationpage)/.test(h);
         var accueil = (h === '' || h === '#/' || /^#\/home(\?|$)/.test(h)) && !/[?&]tab=1/.test(h);
         html.classList.toggle('wf-tableau', tableau);
@@ -92,6 +94,7 @@
         prevu = true;
         requestAnimationFrame(function () {
             prevu = false;
+            if ((location.hash || '') !== dernierHash) route();
             tuiles();
         });
     }
@@ -218,6 +221,17 @@
         tuiles();
         window.addEventListener('hashchange', function () { route(); planifier(); });
         window.addEventListener('popstate', function () { route(); planifier(); });
+        // Jellyfin navigue avec history.pushState, qui ne déclenche pas hashchange
+        ['pushState', 'replaceState'].forEach(function (nom) {
+            var orig = history[nom];
+            if (typeof orig !== 'function') return;
+            history[nom] = function () {
+                var r = orig.apply(this, arguments);
+                route(); planifier();
+                return r;
+            };
+        });
+        setInterval(function () { if ((location.hash || '') !== dernierHash) { route(); planifier(); } }, 700);
         new MutationObserver(planifier).observe(document.body, { childList: true, subtree: true });
         traineeEmpreintes();
         inclinaison();

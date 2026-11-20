@@ -3,7 +3,7 @@
    Pour changer de version, ne modifier que le numéro ci-dessous. */
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.0/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.3.1/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();

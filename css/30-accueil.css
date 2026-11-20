@@ -194,12 +194,22 @@
 }
 
 /* ---------- Barres de progression des cartes : rail gothique + petit loup ---------- */
-.itemProgressBar {
+.innerCardFooter,
+.fullInnerCardFooter,
+.innerCardFooterClear {
+    overflow: visible !important;
+    background: transparent !important;
+}
+
+.innerCardFooter .itemProgressBar,
+.cardContent .itemProgressBar {
     height: 6px !important;
+    margin: 0 10px 8px !important;
     background: linear-gradient(180deg, #0B0B0E, #1B1B21) !important;
-    border: 1px solid rgba(167, 176, 186, 0.4);
+    border: 1px solid rgba(167, 176, 186, 0.45);
     border-radius: 0 !important;
     overflow: visible !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .itemProgressBarForeground {
@@ -211,13 +221,12 @@
 .itemProgressBarForeground::after {
     content: "";
     position: absolute;
-    right: -22px;
-    top: 50%;
-    width: 44px;
-    height: 21px;
-    margin-top: -12px;
-    background: url("../assets/img/loup-course.webp") -88px 0 / 176px 21px no-repeat;
-    filter: drop-shadow(0 0 3px rgba(199, 52, 65, 0.5));
+    right: -20px;
+    bottom: 1px;
+    width: 40px;
+    height: 19px;
+    background: url("../assets/img/loup-course.webp") -80px 0 / 160px 19px no-repeat;
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 3px rgba(199, 52, 65, 0.45));
     pointer-events: none;
 }
 
@@ -233,7 +242,7 @@
     }
 
     to {
-        background-position: -176px 0;
+        background-position: -160px 0;
     }
 }
 
@@ -274,21 +283,50 @@
     transform: scale(1.15);
 }
 
-/* ---------- Sceau de cire « Vu » sur les affiches ---------- */
+/* ---------- Sceau de cire « Vu » sur les affiches ----------
+   Le petit indicateur de Jellyfin est masqué : l'affiche s'assombrit
+   et un grand sceau au blason est frappé en bas à droite. */
 .playedIndicator {
-    width: 2.6em !important;
-    height: 2.6em !important;
-    background: url("../assets/img/sceau-vu.webp") center / contain no-repeat !important;
-    box-shadow: none !important;
-    border-radius: 50% !important;
-    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6));
+    opacity: 0 !important;
+}
+
+.cardImageContainer:has(.playedIndicator)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(10, 10, 12, 0.35), rgba(10, 10, 12, 0.62));
+    transition: opacity var(--wf-normal, 320ms);
+}
+
+.cardImageContainer:has(.playedIndicator)::after {
+    content: "";
+    position: absolute;
+    right: 6%;
+    bottom: 7%;
+    width: 38%;
+    max-width: 96px;
+    aspect-ratio: 1;
+    z-index: 2;
+    pointer-events: none;
+    background: url("../assets/img/sceau-vu.webp") center / contain no-repeat;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.65));
     transform: rotate(-10deg);
     animation: wf-sceau-carte 0.55s cubic-bezier(.2, 1.4, .4, 1) both;
 }
 
-.playedIndicator .indicatorIcon,
-.playedIndicator .material-icons {
-    opacity: 0 !important;
+/* Vignettes larges (épisodes, « Continuer ») : sceau plus petit */
+.backdropCard .cardImageContainer:has(.playedIndicator)::after,
+.overflowBackdropCard .cardImageContainer:has(.playedIndicator)::after {
+    width: 22%;
+}
+
+@media (hover: hover) {
+    .card:hover .cardImageContainer:has(.playedIndicator)::before {
+        opacity: 0.25;
+    }
 }
 
 @keyframes wf-sceau-carte {
@@ -306,16 +344,6 @@
         opacity: 1;
         transform: scale(1) rotate(-10deg);
     }
-}
-
-/* Affiche d'un titre déjà vu : légèrement assombrie */
-.card:has(.playedIndicator) .cardImageContainer {
-    filter: grayscale(0.35) brightness(0.72);
-    transition: filter var(--wf-normal, 320ms);
-}
-
-.card:has(.playedIndicator):hover .cardImageContainer {
-    filter: none;
 }
 
 /* ---------- Accueil : la barre du haut ne répète pas les grandes tuiles ----------
