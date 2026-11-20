@@ -14,9 +14,12 @@ Thème personnel pour l'interface web de Jellyfin 12.4 : dark fantasy, palette s
 | `css/50-lecteur.css` | Rail gothique, loup sur progression et volume, pattes et braises | CSS seul |
 | `css/60-tableau-de-bord.css` | Tableau de bord (chargé par le module JS) | CSS via JS |
 | `css/70-sagas.css` | Rangées Sagas / Cycles, pages, ordre de visionnage, éditeur | CSS (+ JS) |
-| `js/wolfflix-core.js` | Icônes, tableau de bord, tuiles Sagas / Cycles / Favoris, signet des favoris, « Vu » qui retire de « Continuer », traînée d'empreintes, inclinaison | JavaScript |
+| `js/wolfflix-core.js` | Icônes, tableau de bord, tuiles et liens Sagas / Cycles / Favoris, signet des favoris, « Vu » qui retire de « Continuer », traînée d'empreintes, inclinaison | JavaScript |
 | `css/80-bandes-annonces.css` | Bouton et lecteur de bande-annonce | CSS (+ JS) |
+| `css/90-series.css` | Statut, prochain épisode, grille des notes des épisodes | CSS (+ JS) |
+| `css/95-finitions.css` | Transitions de page, onglets, abécédaire, compteurs, cases à cocher, dialogues | CSS seul |
 | `js/wolfflix-sagas.js` | Sagas (collections de films) et Cycles (collections avec séries) : pages, rangées « à suivre » et « ajoutées récemment », ordre perso enregistré dans les métadonnées (identifiant `WolfFlix`, repli sur une étiquette `wfordre:`) | JavaScript |
+| `js/wolfflix-series.js` | Fiche série : statut, « Prochain épisode / Reprendre », grille des notes (fermée par défaut, anti-spoil) | JavaScript |
 | `js/wolfflix-bandes-annonces.js` | Bouton « Bande-annonce » : VF via TMDB, sinon VO, lue dans un lecteur WolfFlix | JavaScript |
 
 ## Installation
@@ -26,17 +29,19 @@ Thème personnel pour l'interface web de Jellyfin 12.4 : dark fantasy, palette s
 Copier tout ce bloc, coller, **Enregistrer** :
 
 ```css
-/* WolfFlix — thème Sang et acier — v0.5.0
+/* WolfFlix — thème Sang et acier — v1.0.0
    À coller dans : Tableau de bord → Général → Code CSS personnalisé
    Pour désactiver un module : mettre sa ligne en commentaire (barre oblique + étoile avant, étoile + barre oblique après). */
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.5.0/css/00-fondations.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.5.0/css/10-identite.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.5.0/css/20-navigation.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.5.0/css/30-accueil.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.5.0/css/40-fiches.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.5.0/css/50-lecteur.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.5.0/css/70-sagas.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.5.0/css/80-bandes-annonces.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/00-fondations.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/10-identite.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/20-navigation.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/30-accueil.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/40-fiches.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/50-lecteur.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/70-sagas.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/80-bandes-annonces.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/90-series.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/css/95-finitions.css");
 ```
 
 ### 2. JavaScript — Tableau de bord → JS Injector
@@ -46,7 +51,8 @@ Première fois seulement : Tableau de bord → Extensions → Gérer les dépôt
 puis installer **JavaScript Injector** depuis le catalogue et redémarrer Jellyfin.
 
 Ensuite : JS Injector → **Add Script** (nom « WolfFlix »), coller ce bloc, cocher **Enabled**, enregistrer.
-Remplacer `COLLE_TA_CLE_API_TMDB_ICI` par ta clé API TMDB (compte gratuit sur themoviedb.org → Paramètres → API).
+Remplacer `COLLE_TA_CLE_API_TMDB_ICI` par ta clé API TMDB (compte gratuit sur themoviedb.org → Paramètres → API), **en gardant les apostrophes**.
+Chaque module JavaScript peut être coupé en passant sa ligne à `false`.
 
 ```js
 /* WolfFlix — à coller dans : Tableau de bord → JS Injector → Add Script
@@ -55,11 +61,12 @@ Remplacer `COLLE_TA_CLE_API_TMDB_ICI` par ta clé API TMDB (compte gratuit sur t
 window.WolfFlixConfig = {
     tmdb: 'COLLE_TA_CLE_API_TMDB_ICI', // clé API TMDB (v3) pour les bandes-annonces VF
     sagas: true,                       // false = désactive Sagas & Cycles
-    bandesAnnonces: true               // false = désactive le bouton bande-annonce
+    bandesAnnonces: true,              // false = désactive le bouton bande-annonce
+    series: true                       // false = désactive prochain épisode + grille des notes
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.5.0/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();
@@ -73,7 +80,7 @@ Ctrl + F5 sur ordinateur ; sur téléphone, fermer et rouvrir l'onglet.
 
 - **Un module** : mettre sa ligne en commentaire, par exemple
   `/* @import url(".../10-identite.css"); */`
-- **Revenir à une version précédente** : remplacer le numéro (`@v0.5.0`) par l'ancien, dans le CSS et dans le script JS Injector.
+- **Revenir à une version précédente** : remplacer le numéro (`@v1.0.0`) par l'ancien, dans le CSS et dans le script JS Injector.
 - **Tout le thème** : vider le champ Code CSS personnalisé, ou y recoller l'ancienne sauvegarde.
 - **Le module JavaScript** : décocher « Enabled » sur le script dans JS Injector.
 - **Pour un seul utilisateur** : Paramètres → Affichage → « Désactiver le code CSS personnalisé fourni par le serveur ».

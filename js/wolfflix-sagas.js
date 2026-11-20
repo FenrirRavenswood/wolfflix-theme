@@ -135,6 +135,10 @@
                     cache[b.Id] = { n: b.ChildCount, t: type, ids: ids };
                 });
             }).then(function () {
+                liste.forEach(function (b) {
+                    var f = b.ProviderIds && b.ProviderIds.WolfFlixType;
+                    if ((f === 's' || f === 'c') && cache[b.Id]) cache[b.Id].t = f;
+                });
                 if (perime) cache._t = Date.now();
                 var existe = {};
                 liste.forEach(function (b) { existe[b.Id] = true; });
@@ -143,9 +147,15 @@
                 return liste.map(function (b) {
                     var c = cache[b.Id] || { t: 's', ids: [] };
                     var o = ordreStocke(b);
+                    var force = b.ProviderIds && b.ProviderIds.WolfFlixType;
+                    if (force === 's' || force === 'c') {
+                        c.t = force;
+                        if (cache[b.Id]) cache[b.Id].t = force;
+                    }
                     return {
                         id: b.Id, nom: b.Name, tag: b.ImageTags && b.ImageTags.Primary,
-                        cree: b.DateCreated, type: c.t, ids: ordonner(c.ids, o), perso: !!o
+                        cree: b.DateCreated, type: c.t, ids: ordonner(c.ids, o), perso: !!o,
+                        vide: !!(force && !c.ids.length)
                     };
                 });
             });
@@ -327,7 +337,18 @@
         });
     }
 
-    /* ---------- Pages « Sagas » et « Cycles » ---------- */
+    /* ---------- Pages « Sagas » et « Cycles » (pages de 100, création) ---------- */
+    var PAR_PAGE = 100;
+
+    function hautEntete() {
+        var barre = document.querySelector('.MuiAppBar-root');
+        return (barre ? Math.round(barre.getBoundingClientRect().bottom) : 64) + 'px';
+    }
+    window.addEventListener('resize', function () {
+        var el = document.getElementById('wf-page');
+        if (el) el.style.setProperty('--wf-haut', hautEntete());
+    }, { passive: true });
+
     function page() {
         var m = /^#\/home\?(?:[^#]*&)?wf=(sagas|cycles)/.exec(location.hash || '');
         var el = document.getElementById('wf-page');
@@ -337,53 +358,82 @@
             return;
         }
         var type = m[1] === 'sagas' ? 's' : 'c';
+        if (el) el.style.setProperty('--wf-haut', hautEntete());
         if (el && el.getAttribute('data-type') === type) return;
         if (!el) {
             el = document.createElement('div');
             el.id = 'wf-page';
             document.body.appendChild(el);
         }
-        var barre = document.querySelector('.MuiAppBar-root');
-        el.style.setProperty('--wf-haut', (barre ? Math.round(barre.getBoundingClientRect().bottom) : 64) + 'px');
+        el.style.setProperty('--wf-haut', hautEntete());
         el.setAttribute('data-type', type);
         html.classList.add('wf-page-ouverte');
         var tri = sessionStorage.getItem('wf-tri-' + type) || 'recent';
         el.innerHTML = '<div class="wf-page-entete padded-left padded-right">' +
             '<div><p class="wf-page-surtitre">WolfFlix</p><h1 class="wf-page-titre">' + NOMS[type].plusieurs + '</h1><p class="wf-page-compte"></p></div>' +
             '<div class="wf-page-outils">' +
+            '<button type="button" class="wf-btn wf-btn-pri wf-creer"><span class="material-icons add" aria-hidden="true"></span> ' +
+            (type === 's' ? 'Ajouter une saga' : 'Ajouter un cycle') + '</button>' +
             '<label class="wf-champ"><span class="material-icons search" aria-hidden="true"></span><input type="search" placeholder="Rechercher" aria-label="Rechercher"></label>' +
             '<select class="wf-tri" aria-label="Trier">' +
             '<option value="recent">Ajout récent</option><option value="nom">Nom</option><option value="taille">Nombre de titres</option>' +
-            '</select></div></div>' +
-            '<div class="wf-page-grille padded-left padded-right">' + loupAttente() + '</div>';
+            '</select>' +
+            '<div class="wf-pagination"><button type="button" class="wf-fleche" data-page="-1" aria-label="Page précédente"><span class="material-icons chevron_left"></span></button>' +
+            '<span class="wf-pagination-texte"></span>' +
+            '<button type="button" class="wf-fleche" data-page="1" aria-label="Page suivante"><span class="material-icons chevron_right"></span></button></div>' +
+            '</div></div>' +
+            '<div class="wf-page-grille padded-left padded-right">' + loupAttente() + '</div>' +
+            '<div class="wf-pagination wf-pagination-bas padded-left padded-right"></div>';
         el.querySelector('.wf-tri').value = tri;
+        el.querySelector('.wf-creer').addEventListener('click', function () { creer(type); });
 
         charger().then(function (cols) {
             if (el.getAttribute('data-type') !== type || !el.isConnected) return;
-            var liste = cols.filter(function (c) { return c.type === type && c.ids.length; });
+            var liste = cols.filter(function (c) { return c.type === type && (c.ids.length || c.vide); });
             var grille = el.querySelector('.wf-page-grille');
             var champ = el.querySelector('input');
             var select = el.querySelector('.wf-tri');
-            function afficher() {
+            var numPage = +sessionStorage.getItem('wf-numpage-' + type) || 0;
+            var filtree = [];
+            function afficher(garderPage) {
                 var f = champ.value.trim().toLowerCase();
                 var t = select.value;
                 sessionStorage.setItem('wf-tri-' + type, t);
-                var l = liste.filter(function (c) { return !f || c.nom.toLowerCase().indexOf(f) !== -1; });
-                l = l.slice().sort(function (a, b) {
+                filtree = liste.filter(function (c) { return !f || c.nom.toLowerCase().indexOf(f) !== -1; });
+                filtree.sort(function (a, b) {
                     if (t === 'nom') return a.nom.localeCompare(b.nom, 'fr');
                     if (t === 'taille') return b.ids.length - a.ids.length;
                     return (b.cree || '').localeCompare(a.cree || '');
                 });
-                el.querySelector('.wf-page-compte').textContent = l.length + ' ' + (l.length > 1 ? NOMS[type].plusieurs : NOMS[type].un).toLowerCase();
-                grille.innerHTML = l.length ? l.map(function (c) {
+                var pages = Math.max(1, Math.ceil(filtree.length / PAR_PAGE));
+                if (!garderPage) numPage = 0;
+                numPage = Math.min(Math.max(numPage, 0), pages - 1);
+                sessionStorage.setItem('wf-numpage-' + type, numPage);
+                var debut = numPage * PAR_PAGE;
+                var tranche = filtree.slice(debut, debut + PAR_PAGE);
+                el.querySelector('.wf-page-compte').textContent = filtree.length + ' ' + (filtree.length > 1 ? NOMS[type].plusieurs : NOMS[type].un).toLowerCase();
+                var texte = filtree.length ? (debut + 1) + '-' + (debut + tranche.length) + ' de ' + filtree.length : '0';
+                el.querySelectorAll('.wf-pagination-texte').forEach(function (x) { x.textContent = texte; });
+                el.querySelectorAll('[data-page="-1"]').forEach(function (x) { x.disabled = numPage === 0; });
+                el.querySelectorAll('[data-page="1"]').forEach(function (x) { x.disabled = numPage >= pages - 1; });
+                el.querySelector('.wf-pagination-bas').style.display = pages > 1 ? '' : 'none';
+                grille.innerHTML = tranche.length ? tranche.map(function (c) {
                     return carte({ id: c.id, nom: c.nom, tag: c.tag, sous: compte(c) + (c.perso ? ' · ordre perso' : '') });
                 }).join('') : '<p class="wf-vide">Rien ici pour l\'instant.</p>';
                 images(grille);
             }
+            el.querySelector('.wf-pagination-bas').innerHTML = el.querySelector('.wf-pagination').innerHTML;
+            el.addEventListener('click', function (e) {
+                var b = e.target.closest('[data-page]');
+                if (!b || b.disabled) return;
+                numPage += +b.getAttribute('data-page');
+                afficher(true);
+                el.scrollTo({ top: 0, behavior: 'smooth' });
+            });
             var minuterie;
-            champ.addEventListener('input', function () { clearTimeout(minuterie); minuterie = setTimeout(afficher, 150); });
-            select.addEventListener('change', afficher);
-            afficher();
+            champ.addEventListener('input', function () { clearTimeout(minuterie); minuterie = setTimeout(function () { afficher(false); }, 150); });
+            select.addEventListener('change', function () { afficher(false); });
+            afficher(true);
             var defile = +sessionStorage.getItem('wf-defile-' + type) || 0;
             if (defile) el.scrollTop = defile;
             el.addEventListener('scroll', function () { sessionStorage.setItem('wf-defile-' + type, el.scrollTop); }, { passive: true });
@@ -391,6 +441,88 @@
             var g = el.querySelector('.wf-page-grille');
             if (g) g.innerHTML = '<p class="wf-vide">Impossible de charger les collections. Réessaie dans un instant.</p>';
         });
+    }
+
+    /* ---------- Créer une saga ou un cycle ---------- */
+    function creer(type) {
+        var fond = document.createElement('div');
+        fond.className = 'wf-editeur-fond';
+        fond.innerHTML = '<form class="wf-editeur wf-creation" role="dialog" aria-modal="true">' +
+            '<header><p class="wf-page-surtitre">Nouveau</p><h2>' + (type === 's' ? 'Nouvelle saga' : 'Nouveau cycle') + '</h2>' +
+            '<p class="wf-aide">Donne-lui un nom ; tu ajouteras ensuite les titres dans l\'ordre voulu.</p></header>' +
+            '<div class="wf-editeur-ajout wf-ouvert"><label class="wf-champ"><span class="material-icons edit" aria-hidden="true"></span>' +
+            '<input type="text" required maxlength="120" placeholder="' + (type === 's' ? 'Ex. : Marvel - Saga' : 'Ex. : Arrowverse - Cycle') + '" aria-label="Nom"></label></div>' +
+            '<footer><span class="wf-editeur-etat"></span><button type="button" class="wf-btn wf-btn-sec" data-act="annuler">Annuler</button>' +
+            '<button type="submit" class="wf-btn wf-btn-pri">Créer</button></footer></form>';
+        document.body.appendChild(fond);
+        html.classList.add('wf-modale-ouverte');
+        var champ = fond.querySelector('input');
+        setTimeout(function () { champ.focus(); }, 50);
+        function fermer() {
+            fond.remove();
+            html.classList.remove('wf-modale-ouverte');
+        }
+        fond.addEventListener('click', function (e) {
+            if (e.target === fond || e.target.closest('[data-act="annuler"]')) fermer();
+        });
+        fond.addEventListener('keydown', function (e) { if (e.key === 'Escape') fermer(); });
+        fond.querySelector('form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            var nom = champ.value.trim();
+            if (!nom) return;
+            fond.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+            fond.querySelector('.wf-editeur-etat').textContent = 'Création…';
+            var a = api();
+            a.ajax({ type: 'POST', url: url('Collections', { Name: nom, IsLocked: false }), dataType: 'json' }).then(function (r) {
+                var id = r && (r.Id || r.id);
+                if (!id) throw new Error('pas d\'identifiant');
+                return a.getItem(uid(), id).then(function (item) {
+                    item.ProviderIds = item.ProviderIds || {};
+                    item.ProviderIds.WolfFlixType = type;
+                    return a.updateItem(item);
+                }).catch(function () { /* le type sera déduit du contenu */ }).then(function () {
+                    var cache = lireCache();
+                    cache[id] = { n: 0, t: type, ids: [] };
+                    ecrireCache(cache);
+                    etat.promesse = null;
+                    sessionStorage.setItem('wf-ouvrir-editeur', id);
+                    fermer();
+                    toast(type === 's' ? 'Saga créée' : 'Cycle créé');
+                    location.hash = lienFiche(id).slice(1);
+                });
+            }).catch(function () {
+                fond.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+                fond.querySelector('.wf-editeur-etat').textContent = '';
+                toast('Création impossible (droits administrateur requis ?)', true);
+            });
+        });
+    }
+
+    /* ---------- Favoris : « Collections » devient « Sagas » et « Cycles » ---------- */
+    function favoris() {
+        if (!html.classList.contains('wf-favoris')) return;
+        var carteBs = Array.prototype.filter.call(document.querySelectorAll('.card[data-type="BoxSet"]'), visible)[0];
+        var section = carteBs && carteBs.closest('.verticalSection');
+        if (!section || section.classList.contains('wf-favoris-collections')) return;
+        section.classList.add('wf-favoris-collections');
+        var ids = Array.prototype.map.call(section.querySelectorAll('.card[data-id]'), function (c) { return c.getAttribute('data-id'); });
+        charger().then(function (cols) {
+            var parId = {};
+            cols.forEach(function (c) { parId[c.id] = c; });
+            var morceaux = '';
+            ['s', 'c'].forEach(function (t) {
+                var l = ids.map(function (i) { return parId[i]; }).filter(function (c) { return c && c.type === t; });
+                if (l.length) {
+                    morceaux += rangee(NOMS[t].plusieurs, l.map(function (c) {
+                        return carte({ id: c.id, nom: c.nom, tag: c.tag, sous: compte(c) });
+                    }), 'favoris-' + t, '#/home?wf=' + (t === 's' ? 'sagas' : 'cycles'));
+                }
+            });
+            if (!morceaux) { section.classList.remove('wf-favoris-collections'); return; }
+            section.insertAdjacentHTML('afterend', morceaux);
+            section.classList.add('wf-remplacee');
+            images(section.parentNode);
+        }).catch(function () { section.classList.remove('wf-favoris-collections'); });
     }
 
     /* ---------- Fiches ---------- */
@@ -511,6 +643,10 @@
             if (p) p.classList.add('wf-collection-ordonnee');
             var b = bloc.querySelector('.wf-ordre-modifier');
             if (b) b.addEventListener('click', function () { editeur(item, enfants, t, bloc, false); });
+            if (admin && sessionStorage.getItem('wf-ouvrir-editeur') === item.Id) {
+                sessionStorage.removeItem('wf-ouvrir-editeur');
+                editeur(item, enfants, t, bloc, true);
+            }
             bloc.querySelectorAll('.wf-ordre-ajouter, .wf-carte-ajout').forEach(function (x) {
                 x.addEventListener('click', function () { editeur(item, enfants, t, bloc, true); });
             });
@@ -716,6 +852,7 @@
             page();
             accueil();
             fiche();
+            favoris();
         });
     }
     window.addEventListener('wf-route', passer);

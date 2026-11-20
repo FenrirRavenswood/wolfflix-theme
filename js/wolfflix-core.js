@@ -6,7 +6,8 @@
    - Tuiles « Sagas », « Cycles » et « Favoris » parmi les grandes tuiles de l'accueil
    - Signet de sang sur les affiches en favori
    - « Vu » coché : remet la lecture à zéro et retire la carte de « Continuer »
-   - Charge les modules Sagas & Cycles et Bandes-annonces
+   - Liens « Sagas » et « Cycles » dans la barre du haut
+   - Charge les modules Sagas & Cycles, Bandes-annonces et Séries
    - Traînée d'empreintes derrière le curseur (ordinateur uniquement)
    - Inclinaison des affiches vers la souris (ordinateur uniquement)
    Désactiver : décocher le script dans Tableau de bord → JS Injector.
@@ -17,7 +18,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v0.5.0';
+    var VERSION = 'v1.0.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -69,10 +70,11 @@
         var h = location.hash || '';
         dernierHash = h;
         var tableau = /^#\/(dashboard|metadata|configurationpage)/.test(h);
-        var accueil = (h === '' || h === '#/' || /^#\/home(\?|$)/.test(h)) && !/[?&]tab=1/.test(h);
+        var accueil = (h === '' || h === '#/' || /^#\/home(\?|$)/.test(h)) && !/[?&](tab=1|wf=)/.test(h);
         html.classList.toggle('wf-tableau', tableau);
         try { window.dispatchEvent(new CustomEvent('wf-route', { detail: h })); } catch (e) { /* ancien navigateur */ }
         html.classList.toggle('wf-accueil', accueil);
+        html.classList.toggle('wf-favoris', /^#\/home\?(?:[^#]*&)?tab=1/.test(h));
         cssTableau(tableau);
     }
 
@@ -95,6 +97,41 @@
                 c.appendChild(a);
             });
         });
+    }
+
+    /* ---------- 3a. Liens « Sagas » et « Cycles » dans la barre du haut ---------- */
+    var LIENS_NAV = [
+        { cle: 'sagas', href: '#/home?wf=sagas', icone: 'theaters', texte: 'Sagas' },
+        { cle: 'cycles', href: '#/home?wf=cycles', icone: 'all_inclusive', texte: 'Cycles' }
+    ];
+    function liensNav() {
+        var modele = document.querySelector('.MuiToolbar-root a.MuiButton-root[href$="/home?tab=1"]');
+        if (!modele || !modele.parentNode) return;
+        var parent = modele.parentNode;
+        var h = location.hash || '';
+        LIENS_NAV.forEach(function (l) {
+            var a = parent.querySelector(':scope > .wf-nav-' + l.cle);
+            if (!a) {
+                a = modele.cloneNode(true);
+                a.classList.add('wf-nav', 'wf-nav-' + l.cle);
+                a.classList.remove('MuiButton-colorPrimary', 'MuiButton-textPrimary', 'Mui-selected');
+                a.classList.add('MuiButton-colorInherit', 'MuiButton-textInherit');
+                a.setAttribute('href', l.href);
+                a.removeAttribute('aria-current');
+                var icone = a.querySelector('.MuiButton-startIcon');
+                Array.prototype.slice.call(a.childNodes).forEach(function (n) { if (n !== icone) a.removeChild(n); });
+                if (icone) icone.innerHTML = '<span class="material-icons" aria-hidden="true">' + l.icone + '</span>';
+                a.appendChild(document.createTextNode(l.texte));
+                parent.appendChild(a);
+            } else if (a !== parent.lastElementChild && a.nextElementSibling && !a.nextElementSibling.classList.contains('wf-nav')) {
+                parent.appendChild(a);
+            }
+            a.classList.toggle('wf-nav-actif', h.indexOf('wf=' + l.cle) !== -1);
+        });
+        // L'ordre : Sagas puis Cycles, toujours à la fin
+        var sagas = parent.querySelector(':scope > .wf-nav-sagas');
+        var cycles = parent.querySelector(':scope > .wf-nav-cycles');
+        if (sagas && cycles && sagas.nextElementSibling !== cycles) parent.insertBefore(sagas, cycles);
     }
 
     /* ---------- 3b. API Jellyfin (petits utilitaires) ---------- */
@@ -193,6 +230,7 @@
         var modules = [];
         if (config.sagas !== false) modules.push('sagas');
         if (config.bandesAnnonces !== false) modules.push('bandes-annonces');
+        if (config.series !== false) modules.push('series');
         modules.forEach(function (nom) {
             var id = 'wf-js-' + nom;
             if (document.getElementById(id)) return;
@@ -213,6 +251,7 @@
             prevu = false;
             if ((location.hash || '') !== dernierHash) route();
             tuiles();
+            liensNav();
             if (favoris) marquerFavoris(); else chargerFavoris();
         });
     }

@@ -716,3 +716,65 @@ html.wf-modale-ouverte body {
         animation: none;
     }
 }
+
+/* ---------- v1.0 : barre du haut, pagination, favoris, création ---------- */
+.MuiToolbar-root .wf-nav {
+    color: inherit !important;
+}
+
+.MuiToolbar-root .wf-nav .material-icons {
+    font-size: 20px;
+}
+
+.MuiToolbar-root .wf-nav.wf-nav-actif {
+    color: var(--wf-sang-vif, #C73441) !important;
+}
+
+.wf-page-outils {
+    align-items: center;
+}
+
+.wf-pagination {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2em;
+}
+
+.wf-pagination-texte {
+    min-width: 7.5em;
+    padding: 0.35em 0.8em;
+    text-align: center;
+    border-radius: 999px;
+    background: #17171C;
+    border: 1px solid rgba(167, 176, 186, 0.22);
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.wf-pagination .wf-fleche:disabled {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+.wf-pagination-bas {
+    display: flex;
+    justify-content: center;
+    padding-bottom: 3em;
+}
+
+.wf-page-grille {
+    padding-bottom: 1em;
+}
+
+/* Favoris : la rangée « Collections » de Jellyfin est remplacée par Sagas + Cycles */
+.verticalSection.wf-remplacee {
+    display: none !important;
+}
+
+.wf-creation {
+    width: min(520px, 100%);
+}
+
+.wf-creation .wf-champ {
+    display: flex;
+}

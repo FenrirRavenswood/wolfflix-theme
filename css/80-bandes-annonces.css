@@ -126,3 +126,102 @@ html.wf-ba-actif .btnPlayTrailer {
 html.wf-modale-ouverte body {
     overflow: hidden;
 }
+
+/* ---------- v1.0 : bouton en pastille et lien YouTube ---------- */
+.wf-btn-ba {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55em;
+    height: 2.9em;
+    margin: 0 0.4em;
+    padding: 0 1.1em 0 0.35em;
+    border-radius: 999px;
+    border: 1px solid rgba(167, 176, 186, 0.45);
+    background: linear-gradient(180deg, rgba(30, 30, 36, 0.92), rgba(14, 14, 17, 0.92));
+    color: var(--wf-texte, #E9E6E1);
+    font-family: var(--wf-titre, serif);
+    font-size: 1rem;
+    letter-spacing: 0.03em;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    transition: border-color var(--wf-rapide, 160ms), transform var(--wf-rapide, 160ms), box-shadow var(--wf-rapide, 160ms);
+}
+
+.wf-btn-ba-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2em;
+    height: 2.2em;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #C73441, #7A1820);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.wf-btn-ba-icone .material-icons {
+    font-size: 1.35em;
+    color: #FFF;
+}
+
+.wf-btn-ba-langue {
+    padding: 0 0.45em;
+    border: 1px solid rgba(199, 52, 65, 0.7);
+    border-radius: 3px;
+    font-family: var(--wf-texte-police, serif);
+    font-size: 0.72em;
+    font-weight: 600;
+    color: #F0B9BE;
+}
+
+@media (hover: hover) {
+    .wf-btn-ba:hover {
+        border-color: #C73441;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55), 0 0 18px rgba(199, 52, 65, 0.25);
+    }
+
+    .wf-btn-ba:hover .wf-btn-ba-icone {
+        animation: wf-respire 1.4s ease-in-out infinite;
+    }
+}
+
+@keyframes wf-respire {
+    50% {
+        box-shadow: 0 0 0 6px rgba(199, 52, 65, 0.18);
+    }
+}
+
+@media (max-width: 600px) {
+    .wf-btn-ba {
+        padding-right: 0.35em;
+    }
+
+    .wf-btn-ba-texte {
+        display: none;
+    }
+}
+
+.wf-ba-bas {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1em;
+    flex-wrap: wrap;
+}
+
+.wf-ba-youtube {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    margin-top: 0.7em;
+    color: var(--wf-acier-clair, #D5DBE1);
+    font-size: 0.85em;
+    text-decoration: none;
+}
+
+.wf-ba-youtube:hover {
+    color: #FFF;
+}
+
+.wf-ba-youtube .material-icons {
+    font-size: 1.1em;
+}

@@ -1,0 +1,172 @@
+/* =====================================================================
+   WolfFlix — 95 · Finitions
+   Transitions entre les pages et petits détails partout.
+   Tout est CSS ; tout s'éteint si « réduire les animations » est actif.
+   ===================================================================== */
+
+/* ---------- Transitions de page ---------- */
+.page:not(.hide) {
+    animation: wf-page-arrivee 0.42s var(--wf-courbe, cubic-bezier(.2, .8, .2, 1)) both;
+}
+
+/* Le lecteur vidéo ne doit jamais glisser */
+#videoOsdPage.page:not(.hide),
+.page.itemDetailPage:not(.hide) .itemBackdrop {
+    animation: none;
+}
+
+@keyframes wf-page-arrivee {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Les fiches : le contenu monte, le fond reste */
+.itemDetailPage:not(.hide) .detailPagePrimaryContainer {
+    animation: wf-page-arrivee 0.55s 0.05s var(--wf-courbe, ease) both;
+}
+
+/* ---------- Onglets : soulignement de sang qui glisse ---------- */
+.emby-tab-button {
+    position: relative;
+    transition: color var(--wf-rapide, 160ms);
+}
+
+.emby-tab-button::after {
+    content: "";
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    bottom: 0.2em;
+    height: 2px;
+    background: #C73441;
+    box-shadow: 0 0 8px rgba(199, 52, 65, 0.6);
+    transform: scaleX(0);
+    transition: transform var(--wf-normal, 320ms) var(--wf-courbe, ease);
+}
+
+.emby-tab-button.emby-tab-button-active::after {
+    transform: scaleX(1);
+}
+
+@media (hover: hover) {
+    .emby-tab-button:hover::after {
+        transform: scaleX(0.5);
+    }
+}
+
+.MuiTab-root.Mui-selected {
+    color: var(--wf-sang-vif, #C73441) !important;
+}
+
+/* ---------- Abécédaire : la lettre survolée rougit ---------- */
+.alphaPickerButton {
+    transition: color var(--wf-rapide, 160ms), transform var(--wf-rapide, 160ms);
+}
+
+@media (hover: hover) {
+    .alphaPickerButton:hover {
+        color: #C73441 !important;
+        transform: scale(1.35);
+    }
+}
+
+.alphaPickerButton-selected {
+    color: #FFF !important;
+    background: #A3232E !important;
+}
+
+/* ---------- Compteurs (épisodes non vus) : pastille de cire ---------- */
+.countIndicator {
+    background: radial-gradient(circle at 35% 30%, #C73441, #7A1820) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+    font-weight: 600;
+}
+
+/* ---------- Titres de section : le chevron avance ---------- */
+.sectionTitleTextButton .material-icons,
+.sectionTitle-link .material-icons {
+    transition: transform var(--wf-rapide, 160ms);
+}
+
+@media (hover: hover) {
+    .sectionTitleTextButton:hover .material-icons,
+    .sectionTitle-link:hover .material-icons {
+        transform: translateX(4px);
+    }
+}
+
+/* ---------- Boutons : léger enfoncement au clic ---------- */
+.emby-button:active,
+.paper-icon-button-light:active,
+.MuiButton-root:active,
+.MuiIconButton-root:active {
+    transform: scale(0.96);
+}
+
+/* ---------- Cases à cocher et interrupteurs Jellyfin en sang ---------- */
+.checkboxOutline {
+    border-color: rgba(167, 176, 186, 0.6) !important;
+}
+
+.emby-checkbox:checked + span + .checkboxOutline,
+.emby-checkbox:checked + .checkboxLabel + .checkboxOutline {
+    background-color: #A3232E !important;
+    border-color: #C73441 !important;
+}
+
+.mdl-switch__input:checked + .mdl-switch__label + .mdl-switch__trackContainer .mdl-switch__track {
+    background: rgba(199, 52, 65, 0.5) !important;
+}
+
+.mdl-switch__input:checked + .mdl-switch__label + .mdl-switch__trackContainer .mdl-switch__thumb {
+    background: #C73441 !important;
+}
+
+/* ---------- Barre de recherche ---------- */
+.searchfields-icon {
+    color: #C73441 !important;
+}
+
+.searchFieldsInner input,
+#searchTextInput {
+    border-bottom: 1px solid rgba(167, 176, 186, 0.35) !important;
+    transition: border-color var(--wf-rapide, 160ms);
+}
+
+.searchFieldsInner input:focus,
+#searchTextInput:focus {
+    border-bottom-color: #C73441 !important;
+}
+
+/* ---------- Infobulles ---------- */
+.MuiTooltip-tooltip {
+    font-family: var(--wf-texte-police, serif) !important;
+    background: #17171C !important;
+    border: 1px solid rgba(167, 176, 186, 0.3);
+    border-left: 2px solid #A3232E;
+    color: var(--wf-texte, #E9E6E1) !important;
+}
+
+/* ---------- Dialogues Jellyfin (menus « ⋮ », éditeurs) ---------- */
+.dialog,
+.MuiDialog-paper {
+    border-top: 2px solid #A3232E !important;
+    animation: wf-page-arrivee 0.3s var(--wf-courbe, ease) both;
+}
+
+/* ---------- Mouvement réduit ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .page:not(.hide),
+    .itemDetailPage:not(.hide) .detailPagePrimaryContainer,
+    .dialog,
+    .MuiDialog-paper {
+        animation: none !important;
+    }
+}

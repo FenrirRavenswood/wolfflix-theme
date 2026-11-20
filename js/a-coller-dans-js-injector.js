@@ -4,11 +4,12 @@
 window.WolfFlixConfig = {
     tmdb: 'COLLE_TA_CLE_API_TMDB_ICI', // clé API TMDB (v3) pour les bandes-annonces VF
     sagas: true,                       // false = désactive Sagas & Cycles
-    bandesAnnonces: true               // false = désactive le bouton bande-annonce
+    bandesAnnonces: true,              // false = désactive le bouton bande-annonce
+    series: true                       // false = désactive prochain épisode + grille des notes
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v0.5.0/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.0.0/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();

@@ -116,9 +116,14 @@
             '<h2 class="wf-ba-titre">' + esc(titre) + '</h2></div>' +
             '<button type="button" class="wf-ba-fermer" aria-label="Fermer"><span class="material-icons close"></span></button></div>' +
             '<div class="wf-ba-video"><iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(ba.cle) +
-            '?autoplay=1&rel=0&modestbranding=1&playsinline=1&hl=fr&cc_lang_pref=fr" title="' + esc(ba.nom || titre) + '"' +
+            '?autoplay=1&rel=0&modestbranding=1&playsinline=1&hl=fr&cc_lang_pref=fr&origin=' + encodeURIComponent(location.origin) +
+            '" title="' + esc(ba.nom || titre) + '"' +
+            // Jellyfin interdit l'envoi du « referrer » ; YouTube l'exige (erreur 153) : on l'autorise pour ce lecteur seulement
+            ' referrerpolicy="strict-origin-when-cross-origin"' +
             ' allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>' +
-            '<p class="wf-ba-mention"><span class="wf-ba-tmdb">TMDB</span> Ce produit utilise l\'API TMDB mais n\'est ni approuvé ni certifié par TMDB.</p>' +
+            '<div class="wf-ba-bas"><p class="wf-ba-mention"><span class="wf-ba-tmdb">TMDB</span> Ce produit utilise l\'API TMDB mais n\'est ni approuvé ni certifié par TMDB.</p>' +
+            '<a class="wf-ba-youtube" href="https://www.youtube.com/watch?v=' + encodeURIComponent(ba.cle) + '" target="_blank" rel="noopener">' +
+            '<span class="material-icons open_in_new" aria-hidden="true"></span> Ouvrir sur YouTube</a></div>' +
             '</div>';
         document.body.appendChild(fond);
         html.classList.add('wf-modale-ouverte');
@@ -166,10 +171,11 @@
                 if (!p || p.querySelector('.wf-btn-ba[data-id="' + id + '"]')) return;
                 var b = document.createElement('button');
                 b.type = 'button';
-                b.className = 'button-flat detailButton emby-button wf-btn-ba';
+                b.className = 'wf-btn-ba';
                 b.setAttribute('data-id', id);
                 b.title = 'Bande-annonce (' + ba.langue + ')';
-                b.innerHTML = '<div class="detailButton-content"><span class="material-icons detailButton-icon theaters" aria-hidden="true"></span></div>';
+                b.innerHTML = '<span class="wf-btn-ba-icone"><span class="material-icons play_arrow" aria-hidden="true"></span></span>' +
+                    '<span class="wf-btn-ba-texte">Bande-annonce</span><span class="wf-btn-ba-langue">' + ba.langue + '</span>';
                 b.addEventListener('click', function () { ouvrir(ba, item.Name); });
                 var lecture = p.querySelector('.btnPlay:not(.hide), .btnResume:not(.hide)');
                 if (lecture && lecture.nextSibling) p.insertBefore(b, lecture.nextSibling);
