@@ -1769,19 +1769,96 @@
         });
     }
 
+    /* ================= « Ajouts récents » : un webtoon, pas ses chapitres =================
+       Jellyfin liste chaque fichier ajouté. Pour les séries en images (CBZ, CBR…) rangées dans
+       un dossier, WolfFlix remplace les chapitres par une seule carte : le dossier du webtoon,
+       placé à la date de son dernier chapitre ajouté. */
+    var ARCHIVE_IMAGES = /\.(cbz|cbr|cb7|cbt|zip|rar|7z|tar)$/i;
+    var regroupementEnCours = {};
+    function rangeeRecents(c) {
+        var sec = c.closest('.verticalSection, .section, .homeSection');
+        var titre = sec && sec.querySelector('.sectionTitle');
+        return !!titre && /ajout|r[ée]cent|latest|recently/i.test(titre.textContent || '');
+    }
+    function regrouperChapitres() {
+        if (!api()) return;
+        document.querySelectorAll('.itemsContainer').forEach(function (c) {
+            if (!rangeeRecents(c)) return;
+            var cartes = Array.prototype.filter.call(c.children, function (x) {
+                return x.classList && x.classList.contains('card') && x.getAttribute('data-type') === 'Book' && x.getAttribute('data-id');
+            });
+            if (!cartes.length) return;
+            var ids = cartes.map(function (x) { return x.getAttribute('data-id'); });
+            var cle = ids.join(',');
+            if (c.getAttribute('data-wf-groupe') === cle || regroupementEnCours[cle]) return;
+            regroupementEnCours[cle] = true;
+            json('Users/' + uid() + '/Items', { Ids: cle, Fields: 'Path,ParentId', EnableImages: false, EnableUserData: false }).then(function (r) {
+                var info = {};
+                (r.Items || []).forEach(function (i) { info[i.Id] = i; });
+                var parents = [];
+                ids.forEach(function (id) {
+                    var i = info[id];
+                    if (i && i.ParentId && ARCHIVE_IMAGES.test(i.Path || '') && parents.indexOf(i.ParentId) === -1) parents.push(i.ParentId);
+                });
+                if (!parents.length) return null;
+                return json('Users/' + uid() + '/Items', { Ids: parents.join(','), Fields: 'ChildCount', EnableUserData: false }).then(function (p) {
+                    var dossiers = {};
+                    (p.Items || []).forEach(function (d) { if (d.Type === 'Folder') dossiers[d.Id] = d; });
+                    var deja = {};
+                    cartes.forEach(function (carte) {
+                        var i = info[carte.getAttribute('data-id')];
+                        var d = i && ARCHIVE_IMAGES.test(i.Path || '') && dossiers[i.ParentId];
+                        if (!d) return;
+                        if (deja[d.Id]) { carte.remove(); return; }
+                        deja[d.Id] = true;
+                        transformerEnDossier(carte, d);
+                    });
+                });
+            }).catch(function () { /* on réessaiera */ }).then(function () {
+                delete regroupementEnCours[cle];
+                var restants = Array.prototype.filter.call(c.children, function (x) { return x.classList && x.classList.contains('card') && x.getAttribute('data-type') === 'Book'; });
+                c.setAttribute('data-wf-groupe', restants.map(function (x) { return x.getAttribute('data-id'); }).join(','));
+            });
+        });
+    }
+    function transformerEnDossier(carte, d) {
+        var ancien = carte.getAttribute('data-id');
+        carte.setAttribute('data-id', d.Id);
+        carte.setAttribute('data-type', 'Folder');
+        carte.setAttribute('data-isfolder', 'true');
+        carte.removeAttribute('data-mediatype');
+        carte.classList.add('wf-carte-webtoon');
+        carte.querySelectorAll('[data-id="' + ancien + '"]').forEach(function (x) { x.setAttribute('data-id', d.Id); });
+        carte.querySelectorAll('a[href*="' + ancien + '"]').forEach(function (a) { a.setAttribute('href', a.getAttribute('href').split(ancien).join(d.Id)); });
+        // Pas de lecture directe ni de barre de progression : la carte mène au dossier du webtoon
+        carte.querySelectorAll('.cardOverlayButton, .itemProgressBar, .cardIndicators, [data-action="play"], [data-action="resume"]').forEach(function (x) { x.remove(); });
+        var img = carte.querySelector('.cardImageContainer');
+        if (img && d.ImageTags && d.ImageTags.Primary) {
+            img.style.backgroundImage = 'url("' + url('Items/' + d.Id + '/Images/Primary', { tag: d.ImageTags.Primary, maxWidth: 400, quality: 90 }) + '")';
+        }
+        var textes = carte.querySelectorAll('.cardText');
+        if (textes[0]) textes[0].innerHTML = '<bdi>' + esc(d.Name) + '</bdi>';
+        if (textes[1]) textes[1].innerHTML = '<bdi>Nouveaux chapitres</bdi>';
+        carte.title = d.Name;
+    }
+
     window.WolfFlix = window.WolfFlix || {};
     window.WolfFlix.lire = function (id, options) { return ouvrirParId(id, options); };
 
     if (window.WolfFlix && window.WolfFlix.abonner) {
         window.WolfFlix.abonner(memoriserFiche);
         if (config.ordreLecture !== false) window.WolfFlix.abonner(ordonnerDossiersLivres);
+        if (config.regrouperChapitres !== false) window.WolfFlix.abonner(regrouperChapitres);
     }
     else {
         var minuterieSecours = null;
         new MutationObserver(function () {
             memoriserFiche();
             clearTimeout(minuterieSecours);
-            if (config.ordreLecture !== false) minuterieSecours = setTimeout(ordonnerDossiersLivres, 150);
+            minuterieSecours = setTimeout(function () {
+                if (config.ordreLecture !== false) ordonnerDossiersLivres();
+                if (config.regrouperChapitres !== false) regrouperChapitres();
+            }, 150);
         }).observe(document.body, { childList: true, subtree: true });
     }
     window.addEventListener('hashchange', memoriserFiche);

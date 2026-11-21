@@ -9,11 +9,12 @@ window.WolfFlixConfig = {
     series: true,                      // false = désactive prochain épisode + grille des notes
     lecteur: true,                     // false = garde le lecteur de livres de Jellyfin
     livresInfos: true,                 // false = retire le bouton « Infos en ligne » des livres
-    ordreLecture: true                 // false = garde le tri par titre de Jellyfin dans les dossiers de livres
+    ordreLecture: true,                // false = garde le tri par titre de Jellyfin dans les dossiers de livres
+    regrouperChapitres: true           // false = « Ajouts récents » montre chaque chapitre au lieu du webtoon
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.1.0/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.2.0/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();
