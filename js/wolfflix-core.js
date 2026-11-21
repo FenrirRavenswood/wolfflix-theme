@@ -8,7 +8,7 @@
    - « Vu » coché : remet la lecture à zéro et retire la carte de « Continuer »
    - Liens « Sagas » et « Cycles » dans la barre du haut
    - « À suivre » sans limite de temps
-   - Charge les modules Sagas & Cycles, Bandes-annonces et Séries
+   - Charge les modules Sagas & Cycles, Bandes-annonces, Séries, Lecteur et Infos des livres
    - Traînée d'empreintes derrière le curseur (ordinateur uniquement)
    - Inclinaison des affiches vers la souris (ordinateur uniquement)
    Désactiver : décocher le script dans Tableau de bord → JS Injector.
@@ -19,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v1.4.0';
+    var VERSION = 'v2.0.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -273,6 +273,8 @@
         if (config.sagas !== false) modules.push('sagas');
         if (config.bandesAnnonces !== false) modules.push('bandes-annonces');
         if (config.series !== false) modules.push('series');
+        if (config.lecteur !== false) modules.push('lecteur');
+        if (config.livresInfos !== false) modules.push('livres-infos');
         modules.forEach(function (nom) {
             var id = 'wf-js-' + nom;
             if (document.getElementById(id)) return;

@@ -1,0 +1,2 @@
+foliate-js @ 78914aef4466eb960965702401634c2cb348e9b1 (MIT) — https://github.com/johnfactotum/foliate-js
+Modifié pour WolfFlix : cmaps et standard_fonts de pdf.js chargés depuis jsDelivr (pdfjs-dist@5.5.207) au lieu d'être copiés ici.

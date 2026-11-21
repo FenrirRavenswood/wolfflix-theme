@@ -6,11 +6,13 @@ window.WolfFlixConfig = {
     youtube: '',                             // facultatif : clé YouTube Data v3 (sinon recherche sans clé via Invidious)
     sagas: true,                       // false = désactive Sagas & Cycles
     bandesAnnonces: true,              // false = désactive le bouton bande-annonce
-    series: true                       // false = désactive prochain épisode + grille des notes
+    series: true,                      // false = désactive prochain épisode + grille des notes
+    lecteur: true,                     // false = garde le lecteur de livres de Jellyfin
+    livresInfos: true                  // false = retire le bouton « Infos en ligne » des livres
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v1.4.0/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.0/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();

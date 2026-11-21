@@ -52,6 +52,9 @@
        api.invidious.io, et le script essaie le suivant si l'un ne répond pas.
        Avec une clé YouTube Data v3 (facultative) : recherche officielle, plus fiable.
        Les résultats sont gardés 30 jours dans le navigateur. */
+    /* État de la dernière recherche YouTube, affiché en bas du lecteur */
+    var etatYt = { source: '', message: '' };
+
     var MIROIRS_SECOURS = ['https://inv.nadeko.net', 'https://invidious.nerdvpn.de', 'https://yewtu.be', 'https://invidious.privacyredirect.com'];
 
     function avecDelai(u, ms, init) {
@@ -88,7 +91,10 @@
         return listeMiroirs().then(function (l) {
             var i = 0;
             function essai() {
-                if (i >= l.length) return [];
+                if (i >= l.length) {
+                    etatYt = { source: 'Invidious', message: 'aucun miroir ne répond' };
+                    return [];
+                }
                 var base = l[i++];
                 return avecDelai(base + '/api/v1/search?type=video&region=FR&q=' + encodeURIComponent(q), 4500).then(function (r) {
                     if (!Array.isArray(r)) throw new Error('réponse inattendue');
@@ -96,6 +102,7 @@
                     l.splice(l.indexOf(base), 1);
                     l.unshift(base);
                     try { localStorage.setItem('wf-invidious-miroirs', JSON.stringify({ t: Date.now(), l: l })); } catch (e) { /* plein */ }
+                    etatYt = { source: 'Invidious (' + base.replace(/^https?:\/\//, '') + ')', message: 'OK' };
                     return r.filter(function (v) { return v.type === 'video' && v.videoId; })
                         .map(function (v) { return { id: v.videoId, titre: v.title || '' }; });
                 }).catch(essai);
@@ -107,7 +114,20 @@
     function rechercheApiYoutube(q) {
         var u = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=15' +
             '&relevanceLanguage=fr&regionCode=FR&q=' + encodeURIComponent(q) + '&key=' + encodeURIComponent(cleYoutube);
-        return avecDelai(u, 6000, { referrerPolicy: 'strict-origin-when-cross-origin' }).then(function (r) {
+        var ctrl = window.AbortController ? new AbortController() : null;
+        var minut = setTimeout(function () { if (ctrl) ctrl.abort(); }, 6000);
+        return fetch(u, { referrerPolicy: 'strict-origin-when-cross-origin', signal: ctrl ? ctrl.signal : undefined }).then(function (rep) {
+            clearTimeout(minut);
+            return rep.json().catch(function () { return {}; }).then(function (r) {
+                if (!rep.ok || r.error) {
+                    var m = (r.error && r.error.message) || ('HTTP ' + rep.status);
+                    etatYt = { source: 'clé YouTube', message: 'erreur : ' + m };
+                    throw new Error(m);
+                }
+                etatYt = { source: 'clé YouTube', message: 'OK' };
+                return r;
+            });
+        }).then(function (r) {
             return (r.items || []).map(function (it) {
                 return { id: it.id && it.id.videoId, titre: (it.snippet && it.snippet.title || '').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&quot;/g, '"') };
             });
@@ -144,10 +164,13 @@
         if (config.rechercheYoutube === false) return Promise.resolve([]);
         noms = (noms || []).filter(function (n) { return n && normal(n).trim().length >= 2; });
         if (!noms.length) return Promise.resolve([]);
-        var cleCache = 'wf-yt2-' + q.toLowerCase();
+        var cleCache = 'wf-yt3-' + q.toLowerCase();
         try {
             var c = JSON.parse(localStorage.getItem(cleCache));
-            if (c && Date.now() - c.t < 30 * 86400000) return Promise.resolve(c.l);
+            if (c && Date.now() - c.t < 30 * 86400000) {
+                etatYt = { source: 'mémoire du navigateur', message: c.l.length + ' vidéo(s) gardée(s)' };
+                return Promise.resolve(c.l);
+            }
         } catch (e) { /* rien */ }
         var source = cleYoutube ? rechercheApiYoutube(q).catch(function () { return rechercheInvidious(q); }) : rechercheInvidious(q);
         return source.then(function (brut) {
@@ -156,7 +179,10 @@
                 var t = v.titre;
                 if (!/bande[- ]?annonce|trailer|teaser/i.test(t) || exclus.test(t)) return null;
                 if (!correspond(t, noms, annee, saison)) return null;
-                var langue = /vostfr|vost\b|sous[- ]titr/i.test(t) ? 'VOSTFR' : /\bVF\b|version fran[çc]aise|fran[çc]ais|\bFR\b/i.test(t) ? 'VF' : null;
+                // VOSTFR si c'est écrit ; VF si c'est écrit, OU si le titre emploie le mot français
+                // « bande-annonce » (les vraies VF s'appellent souvent juste « Bande-annonce officielle »)
+                var langue = /vostfr|vost\b|sous[- ]titr|\bVO\b|version originale/i.test(t) ? 'VOSTFR' :
+                    /\bVF\b|version fran[çc]aise|fran[çc]ais|\bFR\b|bande[- ]?annonce/i.test(t) ? 'VF' : null;
                 if (!langue) return null;
                 var bonneSaison = saison ? new RegExp('(saison|season|\\bS)\\s*0?' + saison + '\\b', 'i').test(t) : false;
                 return { cle: v.id, langue: langue, nom: t, portee: bonneSaison ? 'saison' : 'serie', yt: true };
@@ -305,12 +331,17 @@
             '<button type="button" class="wf-ba-fermer" aria-label="Fermer"><span class="material-icons close"></span></button></div>' +
             '<div class="wf-ba-video"></div>' +
             '<div class="wf-ba-bas"><p class="wf-ba-mention"><span class="wf-ba-tmdb">TMDB</span> Ce produit utilise l\'API TMDB mais n\'est ni approuvé ni certifié par TMDB.</p>' +
-            '<span class="wf-ba-liens"></span></div></div>';
+            '<span class="wf-ba-liens"></span></div>' +
+            '<p class="wf-ba-diagnostic"></p></div>';
         document.body.appendChild(fond);
         html.classList.add('wf-modale-ouverte');
         var cadre = fond.querySelector('.wf-ba-video');
         var surtitre = fond.querySelector('.wf-ba-surtitre');
         var liens = fond.querySelector('.wf-ba-liens');
+        var diag = fond.querySelector('.wf-ba-diagnostic');
+        var nbVfListe = liste.filter(function (v) { return v.langue === 'VF'; }).length;
+        diag.textContent = nbVfListe + ' VF · ' + (liste.length - nbVfListe) + ' autres trouvées · recherche YouTube : ' +
+            (etatYt.source ? etatYt.source + ' — ' + etatYt.message : (cleYoutube ? 'clé présente, pas utilisée (TMDB suffisait ou résultat en mémoire)' : 'pas utilisée (TMDB suffisait ou résultat en mémoire)'));
         var joueur = null;
 
         function echec() {

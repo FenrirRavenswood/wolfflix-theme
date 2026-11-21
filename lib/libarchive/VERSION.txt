@@ -1,0 +1,1 @@
+libarchive.js 2.0.2 (MIT) — worker et wasm servis par Jellyfin (/web/libraries/)
