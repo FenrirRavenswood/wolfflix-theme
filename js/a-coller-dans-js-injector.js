@@ -8,11 +8,12 @@ window.WolfFlixConfig = {
     bandesAnnonces: true,              // false = désactive le bouton bande-annonce
     series: true,                      // false = désactive prochain épisode + grille des notes
     lecteur: true,                     // false = garde le lecteur de livres de Jellyfin
-    livresInfos: true                  // false = retire le bouton « Infos en ligne » des livres
+    livresInfos: true,                 // false = retire le bouton « Infos en ligne » des livres
+    ordreLecture: true                 // false = garde le tri par titre de Jellyfin dans les dossiers de livres
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.4/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.1.0/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();

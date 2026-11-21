@@ -1725,11 +1725,65 @@
         }
     }, true);
 
+    /* ================= Ordre de lecture dans les dossiers de livres =================
+       Jellyfin trie les livres par titre : « Aube » passerait avant « Minuit ».
+       Dans un dossier de livres, WolfFlix remet les cartes dans l'ordre des fichiers
+       (« 01 - Minuit », « 02 - Crépuscule », « 03 - Aube »), dossiers (cycles) d'abord. */
+    var triEnCours = {};
+    function cleNaturelle(i) {
+        var nom = i.Type === 'Folder' ? (i.Name || '') : (String(i.Path || '').split(/[\\/]/).pop() || i.Name || '');
+        return { dossier: i.Type === 'Folder' ? 0 : 1, nom: nom };
+    }
+    function ordonnerDossiersLivres() {
+        if (!api()) return;
+        document.querySelectorAll('.itemsContainer').forEach(function (c) {
+            var cartes = Array.prototype.filter.call(c.children, function (x) { return x.classList && x.classList.contains('card') && x.getAttribute('data-id'); });
+            if (cartes.length < 2) return;
+            var types = cartes.map(function (x) { return x.getAttribute('data-type'); });
+            if (types.indexOf('Book') === -1 || !types.every(function (t) { return t === 'Book' || t === 'Folder'; })) return;
+            var ids = cartes.map(function (x) { return x.getAttribute('data-id'); });
+            var cle = ids.join(',');
+            if (c.getAttribute('data-wf-tri') === cle || triEnCours[cle]) return;
+            triEnCours[cle] = true;
+            json('Users/' + uid() + '/Items', { Ids: cle, Fields: 'Path,ParentId', EnableImages: false, EnableUserData: false }).then(function (r) {
+                var info = {};
+                (r.Items || []).forEach(function (i) { info[i.Id] = i; });
+                var parents = {};
+                ids.forEach(function (id) { if (info[id]) parents[info[id].ParentId] = true; });
+                // Uniquement le contenu d'UN dossier (pas une rangée « récemment ajoutés » mélangée)
+                if (Object.keys(parents).length !== 1 || ids.some(function (id) { return !info[id]; })) {
+                    c.setAttribute('data-wf-tri', cle);
+                    return;
+                }
+                var tries = cartes.slice().sort(function (a, b) {
+                    var x = cleNaturelle(info[a.getAttribute('data-id')]);
+                    var y = cleNaturelle(info[b.getAttribute('data-id')]);
+                    return (x.dossier - y.dossier) || triNaturel(x.nom, y.nom);
+                });
+                var nouvelle = tries.map(function (x) { return x.getAttribute('data-id'); }).join(',');
+                c.setAttribute('data-wf-tri', nouvelle);
+                if (nouvelle === cle) return;
+                var ancre = cartes[cartes.length - 1].nextSibling;
+                tries.forEach(function (x) { c.insertBefore(x, ancre); });
+            }).catch(function () { /* on réessaiera au prochain passage */ }).then(function () { delete triEnCours[cle]; });
+        });
+    }
+
     window.WolfFlix = window.WolfFlix || {};
     window.WolfFlix.lire = function (id, options) { return ouvrirParId(id, options); };
 
-    if (window.WolfFlix && window.WolfFlix.abonner) window.WolfFlix.abonner(memoriserFiche);
-    else new MutationObserver(memoriserFiche).observe(document.body, { childList: true, subtree: true });
+    if (window.WolfFlix && window.WolfFlix.abonner) {
+        window.WolfFlix.abonner(memoriserFiche);
+        if (config.ordreLecture !== false) window.WolfFlix.abonner(ordonnerDossiersLivres);
+    }
+    else {
+        var minuterieSecours = null;
+        new MutationObserver(function () {
+            memoriserFiche();
+            clearTimeout(minuterieSecours);
+            if (config.ordreLecture !== false) minuterieSecours = setTimeout(ordonnerDossiersLivres, 150);
+        }).observe(document.body, { childList: true, subtree: true });
+    }
     window.addEventListener('hashchange', memoriserFiche);
     memoriserFiche();
     void config;
