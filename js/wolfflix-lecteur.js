@@ -84,7 +84,8 @@
         return null;
     }
     function urlFichier(id) {
-        return url('Items/' + id + '/Download', { api_key: api().accessToken() });
+        // Jellyfin 12 n'accepte plus « api_key » (ancienne méthode, désactivée par défaut) : c'est « ApiKey »
+        return url('Items/' + id + '/Download', { ApiKey: api().accessToken() });
     }
 
     function telecharger(lien, surProgres) {
@@ -441,8 +442,9 @@
             });
         }).catch(function (e) {
             if (etat.ferme) return;
-            var droit = e && (e.statut === 401 || e.statut === 403);
-            etat.erreur(droit ? 'Ton compte n\'a pas le droit de télécharger les fichiers. Dans Tableau de bord → Utilisateurs → ton compte, coche « Autoriser le téléchargement des médias » (le lecteur de Jellyfin a le même besoin).'
+            var droit = e && e.statut === 403;
+            etat.erreur(e && e.statut === 401 ? 'Jellyfin a refusé l\'accès au fichier (session expirée ?). Recharge la page avec Ctrl+F5, puis réessaie.'
+                : droit ? 'Ton compte n\'a pas le droit de télécharger les fichiers. Dans Tableau de bord → Utilisateurs → ton compte, coche « Autoriser le téléchargement des médias » (le lecteur de Jellyfin a le même besoin).'
                 : 'Impossible d\'ouvrir ce livre (' + ((e && e.message) || 'erreur inconnue') + ').', true);
         });
         return true;
