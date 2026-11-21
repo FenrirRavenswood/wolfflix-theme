@@ -1,14 +1,14 @@
-/* WolfFlix — thème Sang et acier — v2.0.2
+/* WolfFlix — thème Sang et acier — v2.0.3
    À coller dans : Tableau de bord → Général → Code CSS personnalisé
    Pour désactiver un module : mettre sa ligne en commentaire (barre oblique + étoile avant, étoile + barre oblique après). */
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/00-fondations.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/10-identite.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/20-navigation.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/30-accueil.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/40-fiches.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/50-lecteur.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/70-sagas.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/80-bandes-annonces.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/90-series.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/95-finitions.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/97-lecteur.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/00-fondations.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/10-identite.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/20-navigation.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/30-accueil.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/40-fiches.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/50-lecteur.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/70-sagas.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/80-bandes-annonces.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/90-series.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/95-finitions.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/97-lecteur.css");

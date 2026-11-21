@@ -49,7 +49,7 @@
         setTimeout(function () { t.remove(); }, 3300);
     }
     function element(id) {
-        return json('Items/' + id, { userId: uid(), Fields: 'Path,MediaSources,ParentId,Overview' })
+        return json('Items/' + id, { userId: uid(), Fields: 'Path,MediaSources,ParentId,Overview,Genres,Tags' })
             .catch(function () { return api().getItem(uid(), id); });
     }
     function lireJson(cle, defaut) {
@@ -879,28 +879,91 @@
         if (etat.ferme) { source.fermer(); return; }
         if (!source.pages.length) throw new Error('aucune image dans ce fichier');
 
-        // Mode : choix enregistré pour la série, sinon détection (images très hautes = webtoon)
+        // Mode : choix fait à la main pour la série, sinon détection automatique (retenue pour la série)
         var choixSerie = reglages.series[serie] || {};
-        var mode = options.mode || choixSerie.mode;
+        var mode = options.mode || choixSerie.mode || choixSerie.auto;
         if (!mode) {
-            if (source.webtoon) mode = 'webtoon';
-            else {
-                var echantillon = source.pages.slice(1, 4);
-                if (!echantillon.length) echantillon = source.pages.slice(0, 1);
-                var ratios = [];
-                for (var i = 0; i < echantillon.length; i++) {
-                    try { var d = await dimensions(await echantillon[i].charger()); ratios.push(d.h / Math.max(1, d.l)); } catch (e) { /* rien */ }
-                }
-                ratios.sort();
-                var median = ratios.length ? ratios[Math.floor(ratios.length / 2)] : 1.4;
-                mode = median > 2.1 ? 'webtoon' : 'pages';
-            }
+            etat.attente('Analyse des images…', null);
+            mode = await detecterMode(item, source, options);
+            if (etat.ferme) { source.fermer(); return; }
+            reglages.series[serie] = Object.assign({}, reglages.series[serie] || {}, { auto: mode });
+            choixSerie = reglages.series[serie];
+            sauverReglages();
         }
         if (!choixSerie.sens && source.manga) choixSerie.sens = 'rtl';
         etat.serie = serie;
         etat.choixSerie = choixSerie;
         if (mode === 'webtoon') return modeWebtoon(etat, source, pos);
         return modePages(etat, source, pos);
+    }
+
+    /* Webtoon ou manga ? Analyse du fichier, du plus sûr au plus fin :
+       1. ComicInfo.xml (Format « Webtoon » / « Long Strip ») ;
+       2. mots-clés dans le chemin, les genres ou les étiquettes (webtoon, manhwa, manhua…) ;
+       3. forme des images : très hautes = webtoon ;
+       4. continuité : une bande verticale découpée en morceaux a le bas d'une image
+          identique au haut de la suivante (ce qu'aucune page de manga ne fait). */
+    var MOTS_WEBTOON = /web[\s._-]?toon|manhwa|manhua|long[\s._-]?strip/i;
+    function ligneImage(bmp, y, largeur) {
+        var c = document.createElement('canvas');
+        c.width = largeur; c.height = 1;
+        var ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(bmp, 0, y, bmp.width, 1, 0, 0, largeur, 1);
+        return ctx.getImageData(0, 0, largeur, 1).data;
+    }
+    function uniforme(px) {
+        var m = [0, 0, 0], n = px.length / 4, ecart = 0;
+        for (var i = 0; i < px.length; i += 4) { m[0] += px[i]; m[1] += px[i + 1]; m[2] += px[i + 2]; }
+        m = m.map(function (x) { return x / n; });
+        for (var j = 0; j < px.length; j += 4) ecart += Math.abs(px[j] - m[0]) + Math.abs(px[j + 1] - m[1]) + Math.abs(px[j + 2] - m[2]);
+        return ecart / n < 12;
+    }
+    function difference(a, b) {
+        var d = 0;
+        for (var i = 0; i < a.length; i += 4) d += Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]);
+        return d / (a.length / 4);
+    }
+    async function detecterMode(item, source, options) {
+        if (source.webtoon) return 'webtoon';
+        var texte = [item.Path, item.Name, options.serie].concat(item.Genres || [], item.Tags || []).join(' ');
+        if (MOTS_WEBTOON.test(texte)) return 'webtoon';
+        var pages = source.pages;
+        var n = pages.length;
+        if (n < 2) return 'pages';
+        // Paires d'images voisines réparties dans tout le fichier (sans la couverture)
+        var depart = n > 3 ? 1 : 0;
+        var paires = [];
+        [0.15, 0.4, 0.65, 0.88].forEach(function (f) {
+            var k = Math.min(n - 2, Math.max(depart, Math.floor(f * n)));
+            if (paires.indexOf(k) === -1) paires.push(k);
+        });
+        var ratios = [];
+        var raccords = 0, coupures = 0;
+        for (var i = 0; i < paires.length; i++) {
+            var a = null, b = null;
+            try {
+                a = await createImageBitmap(await pages[paires[i]].charger());
+                b = await createImageBitmap(await pages[paires[i] + 1].charger());
+                ratios.push(a.height / Math.max(1, a.width), b.height / Math.max(1, b.width));
+                if (Math.abs(a.width - b.width) <= 2) {
+                    var bas = ligneImage(a, a.height - 1, 96);
+                    var haut = ligneImage(b, 0, 96);
+                    // Deux bords blancs (marges) ne prouvent rien : on ne compte que les bords dessinés
+                    if (!(uniforme(bas) && uniforme(haut))) {
+                        if (difference(bas, haut) < 40) raccords++; else coupures++;
+                    }
+                } else {
+                    coupures++;
+                }
+            } catch (e) { /* image illisible : on passe */ }
+            if (a && a.close) a.close();
+            if (b && b.close) b.close();
+        }
+        ratios.sort(function (x, y) { return x - y; });
+        var median = ratios.length ? ratios[Math.floor(ratios.length / 2)] : 1.4;
+        if (median > 2.0) return 'webtoon';
+        if (raccords > 0 && raccords >= coupures) return 'webtoon';
+        return 'pages';
     }
 
     function changerMode(etat, mode) {

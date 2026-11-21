@@ -32,20 +32,20 @@ Thème personnel pour l'interface web de Jellyfin 12.4 : dark fantasy, palette s
 Copier tout ce bloc, coller, **Enregistrer** :
 
 ```css
-/* WolfFlix — thème Sang et acier — v2.0.2
+/* WolfFlix — thème Sang et acier — v2.0.3
    À coller dans : Tableau de bord → Général → Code CSS personnalisé
    Pour désactiver un module : mettre sa ligne en commentaire (barre oblique + étoile avant, étoile + barre oblique après). */
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/00-fondations.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/10-identite.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/20-navigation.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/30-accueil.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/40-fiches.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/50-lecteur.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/70-sagas.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/80-bandes-annonces.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/90-series.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/95-finitions.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/css/97-lecteur.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/00-fondations.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/10-identite.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/20-navigation.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/30-accueil.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/40-fiches.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/50-lecteur.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/70-sagas.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/80-bandes-annonces.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/90-series.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/95-finitions.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/css/97-lecteur.css");
 ```
 
 ### 2. JavaScript — Tableau de bord → JS Injector
@@ -73,7 +73,7 @@ window.WolfFlixConfig = {
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.2/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.0.3/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();
@@ -102,7 +102,7 @@ Ctrl + F5 sur ordinateur ; sur téléphone, fermer et rouvrir l'onglet.
 - Le bouton **Lire** (fiche, cartes, « Continuer la lecture ») ouvre le lecteur WolfFlix par-dessus Jellyfin. Le bouton « retour » du navigateur ou Échap le ferme.
 - Le compte doit avoir le droit **« Autoriser le téléchargement des médias »** (Tableau de bord → Utilisateurs) — c'est aussi le cas pour le lecteur de Jellyfin.
 - Formats : EPUB, KEPUB, MOBI, AZW, AZW3, FB2, PDF (livres) ; CBZ, ZIP, CBR, RAR, CB7, 7Z, CBT (images). Les CBZ sont lus **par morceaux** : un gros fichier s'ouvre sans être téléchargé en entier.
-- Webtoon ou manga : détecté tout seul (images très hautes = webtoon, ou `ComicInfo.xml`), modifiable dans les réglages ; le choix est retenu pour toute la série (le dossier).
+- Webtoon ou manga : **détecté tout seul** à la première ouverture, en analysant le CBZ — `ComicInfo.xml`, mots « webtoon / manhwa / manhua » dans le chemin, les genres ou les étiquettes, images très hautes, et surtout **continuité** : si le bas d'une image se raccorde au haut de la suivante, c'est une bande verticale découpée, donc un webtoon (même quand les morceaux ont la taille d'une page de manga). Le résultat est retenu pour toute la série (le dossier) ; on peut toujours le changer dans les réglages du lecteur, et ce choix manuel l'emporte.
 - Rangement conseillé : `Livres/Nom du webtoon/Chapitre 001.cbz`, un dossier par série. Un CBZ peut contenir plusieurs chapitres (un sous-dossier par chapitre), le lecteur les repère.
 - **Meilleures infos** : installer depuis le catalogue d'extensions **OpenLibrary**, **GoogleBooks** et **ComicVine** (clé gratuite sur comicvine.gamespot.com/api), les cocher dans la bibliothèque Livres (téléchargeurs de métadonnées et d'images, langue : français), puis « Actualiser les métadonnées ». Pour les webtoons/mangas, le bouton **Infos en ligne** de WolfFlix complète avec AniList et MangaDex.
 - Bibliothèques tierces incluses dans `lib/` : foliate-js (MIT), zip.js (BSD-3-Clause), libarchive.js (MIT). Polices Literata, Atkinson Hyperlegible, OpenDyslexic (OFL).
@@ -111,7 +111,7 @@ Ctrl + F5 sur ordinateur ; sur téléphone, fermer et rouvrir l'onglet.
 
 - **Un module** : mettre sa ligne en commentaire, par exemple
   `/* @import url(".../10-identite.css"); */`
-- **Revenir à une version précédente** : remplacer le numéro (`@v2.0.2`) par l'ancien, dans le CSS et dans le script JS Injector.
+- **Revenir à une version précédente** : remplacer le numéro (`@v2.0.3`) par l'ancien, dans le CSS et dans le script JS Injector.
 - **Tout le thème** : vider le champ Code CSS personnalisé, ou y recoller l'ancienne sauvegarde.
 - **Le module JavaScript** : décocher « Enabled » sur le script dans JS Injector.
 - **Pour un seul utilisateur** : Paramètres → Affichage → « Désactiver le code CSS personnalisé fourni par le serveur ».
