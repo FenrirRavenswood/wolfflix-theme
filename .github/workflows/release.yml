@@ -1,0 +1,30 @@
+# WolfFlix — release automatique : dès que la version change dans
+# js/wolfflix-core.js, GitHub crée tout seul le tag et la release.
+name: Release automatique
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'js/wolfflix-core.js'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lire la version
+        id: version
+        run: |
+          V=$(grep -oP "VERSION = '\Kv[0-9]+\.[0-9]+\.[0-9]+" js/wolfflix-core.js)
+          if [ -z "$V" ]; then echo "Version introuvable"; exit 1; fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+      - name: Créer la release si elle n'existe pas encore
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ steps.version.outputs.version }}"
+          if gh release view "$V" > /dev/null 2>&1; then echo "Déjà faite."; exit 0; fi
+          gh release create "$V" --target "$GITHUB_SHA" --title "WolfFlix $V" --notes "Version $V du thème WolfFlix."
