@@ -621,7 +621,8 @@
         coque.setAttribute('data-theme', r.theme);
         etat.attente('Ouverture du livre…', null);
 
-        await import(BASE + 'lib/foliate/view.js');
+        // Balise renommée « wf-foliate-view » : Jellyfin (ou une extension) peut déjà utiliser « foliate-view »
+        var View = (await import(BASE + 'lib/foliate/view.js')).View;
         var livre;
         var chargeur = null;
         if (ext === 'epub' || ext === 'kepub') {
@@ -640,9 +641,10 @@
         if (etat.ferme) return;
         nettoyerScripts(livre);
 
-        var vue = document.createElement('foliate-view');
+        var vue = new View();
         vue.className = 'wf-lect-vue';
         etat.scene.appendChild(vue);
+        if (typeof vue.open !== 'function') throw new Error('moteur de lecture indisponible (conflit avec une autre extension ?)');
         await vue.open(livre);
         var fixe = vue.isFixedLayout;
         var rendu = vue.renderer;
