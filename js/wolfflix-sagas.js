@@ -1192,7 +1192,7 @@
        Ses séries restent aussi affichées. Le cycle n'est pas compté dans « 1-100 de 127 ». */
     var seriesParBib = {};
     function nomTri(t) {
-        return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+        return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/^(the|a|an)\s+/, '').trim();
     }
     function cyclesBibliotheque() {
