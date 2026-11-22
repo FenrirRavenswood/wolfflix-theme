@@ -388,35 +388,27 @@
     overflow: visible !important;
 }
 
-.itemDetailPage .nameContainer .itemName,
-.itemDetailPage .nameContainer .parentName,
-.itemDetailPage .parentNameLast {
-    white-space: normal !important;
+/* Titre sur une seule ligne, jamais coupé : s'il est trop long, WolfFlix réduit sa taille
+   pour qu'il tienne (voir ajusterTitres dans wolfflix-core.js). Les éléments que Jellyfin cache
+   (titre original en anglais…) restent cachés. */
+.itemDetailPage .nameContainer .itemName:not(.hide),
+.itemDetailPage .nameContainer .parentName:not(.hide) {
+    white-space: nowrap !important;
     text-overflow: clip !important;
-    overflow: hidden !important;
-    display: -webkit-box !important;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    overflow-wrap: break-word;
-    hyphens: auto;
-    font-size: clamp(1.6em, 2.5vw, 2.6em) !important;
-    line-height: 1.12 !important;
-    padding-top: 0.08em;
-    margin-bottom: 0.15em;
+    overflow: visible !important;
+    max-width: 100%;
+    font-size: clamp(1.6em, 2.5vw, 2.6em);
+    line-height: 1.15 !important;
 }
 
-/* Téléphone : titre un peu plus petit, jusqu'à 4 lignes, boutons en dessous */
+/* Téléphone : le titre prend toute la largeur, les boutons passent dessous */
 @media all and (max-width: 600px) {
     .itemDetailPage .detailRibbon .infoWrapper {
         flex-basis: 100% !important;
     }
 
-    .itemDetailPage .nameContainer .itemName,
-    .itemDetailPage .nameContainer .parentName,
-    .itemDetailPage .parentNameLast {
-        font-size: 1.55em !important;
-        -webkit-line-clamp: 4;
-        line-clamp: 4;
+    .itemDetailPage .nameContainer .itemName:not(.hide),
+    .itemDetailPage .nameContainer .parentName:not(.hide) {
+        font-size: 1.55em;
     }
 }

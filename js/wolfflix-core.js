@@ -19,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v2.5.0';
+    var VERSION = 'v2.5.1';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -301,6 +301,7 @@
         liensNav();
         marquerVus();
         titresComplets();
+        ajusterTitres();
         if (favoris) marquerFavoris(); else chargerFavoris();
         for (var i = 0; i < abonnes.length; i++) {
             try { abonnes[i](); } catch (e) { /* un module en erreur ne bloque pas les autres */ }
@@ -308,13 +309,32 @@
     }
     /* Titre complet au survol, pour les titres encore trop longs même sur deux lignes */
     function titresComplets() {
-        document.querySelectorAll('.cardText-first, .listItemBodyText, .nameContainer .itemName').forEach(function (t) {
+        document.querySelectorAll('.cardText-first, .listItemBodyText').forEach(function (t) {
             var texte = (t.textContent || '').trim();
             if (t.getAttribute('data-wf-titre') === texte) return;
             t.setAttribute('data-wf-titre', texte);
             if (texte) t.setAttribute('title', texte); else t.removeAttribute('title');
         });
     }
+    /* Titre d'une fiche : une seule ligne, en entier. S'il dépasse, sa taille est réduite
+       juste assez pour tenir (jamais en dessous de 13 px). */
+    function ajusterTitres() {
+        document.querySelectorAll('.itemDetailPage:not(.hide) .nameContainer .itemName:not(.hide), .itemDetailPage:not(.hide) .nameContainer .parentName:not(.hide)').forEach(function (t) {
+            var parent = t.parentNode;
+            var largeur = parent ? parent.clientWidth : 0;
+            if (!largeur) return;
+            var cle = (t.textContent || '') + '|' + largeur + '|' + window.innerWidth;
+            if (t.getAttribute('data-wf-ajuste') === cle) return;
+            t.style.fontSize = '';
+            var taille = parseFloat(getComputedStyle(t).fontSize) || 16;
+            for (var i = 0; i < 6 && t.scrollWidth > largeur + 1 && taille > 13; i++) {
+                taille = Math.max(13, Math.floor(taille * largeur / t.scrollWidth * 0.98));
+                t.style.fontSize = taille + 'px';
+            }
+            t.setAttribute('data-wf-ajuste', cle);
+        });
+    }
+    window.addEventListener('resize', function () { planifier(); });
     function planifier() {
         if (prevu) return;
         prevu = true;
