@@ -10,11 +10,12 @@ window.WolfFlixConfig = {
     lecteur: true,                     // false = garde le lecteur de livres de Jellyfin
     livresInfos: true,                 // false = retire le bouton « Infos en ligne » des livres
     ordreLecture: true,                // false = garde le tri par titre de Jellyfin dans les dossiers de livres
-    regrouperChapitres: true           // false = « Ajouts récents » montre chaque chapitre au lieu du webtoon
+    regrouperChapitres: true,          // false = « Ajouts récents » montre chaque chapitre au lieu du webtoon
+    compterWebtoons: true              // false = garde le nombre de livres de Jellyfin (1 chapitre = 1 livre)
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.3.0/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.4.0/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();

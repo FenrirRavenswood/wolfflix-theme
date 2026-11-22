@@ -1842,6 +1842,121 @@
         carte.title = d.Name;
     }
 
+    /* ---------- Nombre de livres : un webtoon (ou manga) en chapitres compte pour 1 ----------
+       Jellyfin compte chaque fichier comme un livre. Ici : chaque EPUB / PDF compte pour 1
+       (les tomes d'une saga restent comptés un par un), et toutes les archives d'images
+       (CBZ…) d'un même dossier comptent ensemble pour 1. Seul l'affichage change. */
+    var comptes = { libs: {}, ecart: 0, pret: null, quand: 0 };
+
+    function calculerComptes(force) {
+        if (!api()) return Promise.resolve(comptes);
+        if (comptes.pret && !force && Date.now() - comptes.quand < 10 * 60 * 1000) return comptes.pret;
+        comptes.quand = Date.now();
+        comptes.pret = json('Users/' + uid() + '/Views').then(function (v) {
+            var libs = (v.Items || []).filter(function (b) { return b.CollectionType === 'books'; });
+            return Promise.all(libs.map(function (b) {
+                return json('Users/' + uid() + '/Items', {
+                    ParentId: b.Id, Recursive: true, IncludeItemTypes: 'Book', Fields: 'Path,ParentId',
+                    EnableImages: false, EnableUserData: false
+                }).then(function (r) {
+                    var items = r.Items || [], dossiers = {}, livres = 0;
+                    items.forEach(function (i) {
+                        if (ARCHIVE_IMAGES.test(i.Path || '')) dossiers[i.ParentId || i.Id] = true;
+                        else livres++;
+                    });
+                    var corrige = livres + Object.keys(dossiers).length;
+                    comptes.libs[b.Id] = { brut: items.length, corrige: corrige };
+                });
+            }));
+        }).then(function () {
+            comptes.ecart = 0;
+            Object.keys(comptes.libs).forEach(function (k) { comptes.ecart += comptes.libs[k].brut - comptes.libs[k].corrige; });
+            corrigerTextes();
+            return comptes;
+        }).catch(function () { comptes.pret = null; return comptes; });
+        return comptes.pret;
+    }
+
+    function corrigerCompteurs(o) {
+        if (o && typeof o.BookCount === 'number' && comptes.ecart > 0) o.BookCount = Math.max(0, o.BookCount - comptes.ecart);
+        return o;
+    }
+
+    // Les écrans qui demandent le nombre d'éléments au serveur (/Items/Counts)
+    function intercepterComptes() {
+        var a = api();
+        if (a && a.getItemCounts && !a.__wfComptes) {
+            a.__wfComptes = true;
+            var orig = a.getItemCounts.bind(a);
+            a.getItemCounts = function () {
+                var p = orig.apply(null, arguments);
+                return Promise.all([p, calculerComptes()]).then(function (r) { return corrigerCompteurs(r[0]); });
+            };
+        }
+        if (!window.__wfFetchComptes && window.fetch) {
+            window.__wfFetchComptes = true;
+            var f = window.fetch.bind(window);
+            window.fetch = function (entree) {
+                var u = typeof entree === 'string' ? entree : (entree && entree.url) || '';
+                var p = f.apply(null, arguments);
+                if (!/\/Items\/Counts\b/i.test(u)) return p;
+                return Promise.all([p, calculerComptes()]).then(function (r) {
+                    var rep = r[0];
+                    if (!rep.ok) return rep;
+                    return rep.clone().json().then(function (o) {
+                        return new Response(JSON.stringify(corrigerCompteurs(o)), { status: rep.status, statusText: rep.statusText, headers: rep.headers });
+                    }, function () { return rep; });
+                });
+            };
+        }
+        if (!window.__wfXhrComptes && window.XMLHttpRequest) {
+            window.__wfXhrComptes = true;
+            var ouvrir = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function (m, u) {
+                if (/\/Items\/Counts\b/i.test(String(u || '')) && comptes.ecart > 0) {
+                    var x = this;
+                    x.addEventListener('readystatechange', function () {
+                        if (x.readyState !== 4) return;
+                        try {
+                            var o = corrigerCompteurs(JSON.parse(x.responseText));
+                            var t = JSON.stringify(o);
+                            Object.defineProperty(x, 'responseText', { value: t, configurable: true });
+                            Object.defineProperty(x, 'response', { value: x.responseType === 'json' ? o : t, configurable: true });
+                        } catch (e) { /* réponse non JSON : laissée telle quelle */ }
+                    }, true);
+                }
+                return ouvrir.apply(this, arguments);
+            };
+        }
+    }
+
+    // Textes affichés dans une bibliothèque de livres : « 1-100 sur 629 », « 629 livres »
+    function corrigerTextes() {
+        var h = location.hash || '';
+        var lib = Object.keys(comptes.libs).filter(function (id) { return h.indexOf(id) !== -1; })[0];
+        var page = document.querySelector('.page:not(.hide)') || document.body;
+        if (!lib) return;
+        var c = comptes.libs[lib];
+        if (!c || c.brut === c.corrige) return;
+        var brut = String(c.brut);
+        var marche = document.createTreeWalker(page, NodeFilter.SHOW_TEXT);
+        var n, aChanger = [];
+        while ((n = marche.nextNode())) {
+            if (n.nodeValue.indexOf(brut) !== -1 && n.nodeValue.length < 80 && !(n.parentNode && n.parentNode.closest && n.parentNode.closest('.card, .listItem'))) aChanger.push(n);
+        }
+        aChanger.forEach(function (t) {
+            var v = t.nodeValue;
+            var nv = v.replace(new RegExp('(\\d+\\s*[-–]\\s*\\d+)\\s*(?:sur|of|/|de)\\s*' + brut + '\\b', 'i'), '$1 \u00b7 ' + c.corrige + ' livres')
+                .replace(new RegExp('\\b' + brut + '(\\s*)(livres?|books?|éléments?|items?)', 'i'), c.corrige + '$1$2');
+            if (nv !== v) t.nodeValue = nv;
+        });
+    }
+
+    function suivreComptes() {
+        intercepterComptes();
+        calculerComptes().then(corrigerTextes);
+    }
+
     window.WolfFlix = window.WolfFlix || {};
     window.WolfFlix.lire = function (id, options) { return ouvrirParId(id, options); };
 
@@ -1849,6 +1964,7 @@
         window.WolfFlix.abonner(memoriserFiche);
         if (config.ordreLecture !== false) window.WolfFlix.abonner(ordonnerDossiersLivres);
         if (config.regrouperChapitres !== false) window.WolfFlix.abonner(regrouperChapitres);
+        if (config.compterWebtoons !== false) window.WolfFlix.abonner(suivreComptes);
     }
     else {
         var minuterieSecours = null;
@@ -1858,6 +1974,7 @@
             minuterieSecours = setTimeout(function () {
                 if (config.ordreLecture !== false) ordonnerDossiersLivres();
                 if (config.regrouperChapitres !== false) regrouperChapitres();
+                if (config.compterWebtoons !== false) suivreComptes();
             }, 150);
         }).observe(document.body, { childList: true, subtree: true });
     }
