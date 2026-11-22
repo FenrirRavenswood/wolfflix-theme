@@ -435,3 +435,101 @@ html.wf-accueil .MuiToolbar-root .MuiButton-root:not([href="#/"]) {
         text-overflow: ellipsis;
     }
 }
+
+/* ---------- Tuiles « Mes médias » sur téléphone : grille de petites tuiles ----------
+   (l'ordinateur garde sa ligne de grandes tuiles, voir plus haut) */
+@media all and (max-width: 49.99em) {
+    .homeLibraryButtonContainer {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.55em;
+        padding: 0.2em 0.1em 0.4em;
+    }
+
+    .homeLibraryButton {
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        margin: 0 !important;
+        min-height: 5.4em;
+        padding: 0.75em 0.3em !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.35em;
+        text-align: center;
+        font-size: 0.9em !important;
+    }
+
+    .homeLibraryButton .homeLibraryIcon {
+        margin: 0 !important;
+        font-size: 1.75em !important;
+    }
+
+    .homeLibraryButton .homeLibraryText {
+        white-space: normal;
+        line-height: 1.15;
+        overflow-wrap: break-word;
+        hyphens: auto;
+    }
+}
+
+/* Tuile seule sur la dernière ligne : elle prend toute la largeur, icône à côté du texte */
+@media all and (max-width: 29.99em) {
+    .homeLibraryButtonContainer > .homeLibraryButton:last-child:nth-child(3n+1) {
+        grid-column: 1 / -1;
+        flex-direction: row !important;
+        min-height: 3.4em;
+        gap: 0.7em;
+    }
+}
+
+@media all and (min-width: 30em) and (max-width: 49.99em) {
+    .homeLibraryButtonContainer {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+/* ---------- Titres des cartes : sur deux lignes au lieu d'être coupés ---------- */
+.cardText.cardText-first {
+    white-space: normal !important;
+    text-overflow: clip !important;
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    line-height: 1.25 !important;
+    min-height: 2.5em;
+    overflow-wrap: break-word;
+    hyphens: auto;
+}
+
+/* Le lien du titre suit le retour à la ligne */
+.cardText.cardText-first a,
+.cardText.cardText-first bdi,
+.cardText.cardText-first button {
+    white-space: normal !important;
+}
+
+/* Listes (épisodes, chapitres, recherche) : le titre passe aussi à la ligne */
+.listItemBodyText:not(.secondary),
+.listItemBodyText.listItemBodyText-nowrap {
+    white-space: normal !important;
+    text-overflow: clip !important;
+    overflow-wrap: break-word;
+}
+
+/* Téléphone : cartes étroites, donc trois lignes et un texte un peu plus petit */
+@media all and (max-width: 600px) {
+    .cardText.cardText-first {
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        font-size: 0.92em;
+    }
+
+    .cardText-secondary {
+        font-size: 0.85em;
+    }
+}
