@@ -1965,7 +1965,10 @@
         if (!api()) return;
         document.querySelectorAll('.card[data-type="Folder"][data-id]:not([data-wf-couv])').forEach(function (carte) {
             var cont = carte.querySelector('.cardImageContainer');
-            if (!cont || !carte.querySelector('.cardImageIcon')) { carte.setAttribute('data-wf-couv', '0'); return; }
+            // Seulement une vraie carte sans image : pas d'image prévue (data-src) ni déjà affichée
+            var sansImage = cont && /\bdefaultCardBackground/.test(cont.className) && !cont.getAttribute('data-src') &&
+                !(cont.style.backgroundImage && cont.style.backgroundImage !== 'none') && carte.querySelector('.cardImageIcon');
+            if (!sansImage) { carte.setAttribute('data-wf-couv', '0'); return; }
             carte.setAttribute('data-wf-couv', '1');
             var id = carte.getAttribute('data-id');
             if (!couvDossiers[id]) {

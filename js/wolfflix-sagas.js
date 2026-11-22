@@ -1268,8 +1268,13 @@
                 el.className = modele + ' wf-carte wf-cycle-bib';
                 el.setAttribute('data-type', 'BoxSet');
                 if (avant) grille.insertBefore(el, avant); else grille.appendChild(el);
+                // Image posée tout de suite (la grille de Jellyfin n'attend pas le défilement)
+                var im = el.querySelector('[data-wf-src]');
+                if (im) {
+                    im.style.backgroundImage = 'url("' + im.getAttribute('data-wf-src') + '")';
+                    im.removeAttribute('data-wf-src');
+                }
             });
-            images(grille);
             grille.setAttribute('data-wf-cycles', cle);
         }).catch(function () { grille.removeAttribute('data-wf-cycles'); });
     }
