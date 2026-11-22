@@ -1187,8 +1187,14 @@
         }
     }
 
-    /* ---------- Bibliothèque Séries : rangée « Cycles » en tête ---------- */
+    /* ---------- Bibliothèque Séries : les cycles au milieu des séries ----------
+       Comme les sagas dans Films : chaque cycle prend sa place alphabétique dans la grille.
+       Ses séries restent aussi affichées. Le cycle n'est pas compté dans « 1-100 de 127 ». */
     var seriesParBib = {};
+    function nomTri(t) {
+        return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/^(the|a|an)\s+/, '').trim();
+    }
     function cyclesBibliotheque() {
         var h = location.hash || '';
         if (!/^#\/tv\?/.test(h)) return;
@@ -1198,11 +1204,22 @@
         var grille = Array.prototype.filter.call(document.querySelectorAll('.itemsContainer'), function (c) {
             return visible(c) && c.querySelector('.card[data-type="Series"]');
         })[0];
-        if (!grille || !grille.parentNode) return;
-        var hote = grille.parentNode;
-        var marque = hote.getAttribute('data-wf-cycles');
-        if (hote.querySelector(':scope > .wf-section-bib-cycles[data-bib="' + bib + '"]') || marque === 'en-cours' || marque === 'aucun-' + bib) return;
-        hote.setAttribute('data-wf-cycles', 'en-cours');
+        if (!grille) return;
+        var cartesSeries = grille.querySelectorAll('.card[data-type="Series"]');
+        // Position dans la liste : « 101-127 de 127 » → page qui commence à 101
+        var debut = 1, total = 0, mp = null;
+        var pageActive = grille.closest('.page') || document.body;
+        var marche = document.createTreeWalker(pageActive, NodeFilter.SHOW_TEXT);
+        var noeud;
+        while (!mp && (noeud = marche.nextNode())) {
+            if (grille.contains(noeud)) continue;
+            mp = /^\s*(\d+)\s*[-\u2013]\s*(\d+)\s+\S+\s+(\d+)\s*$/.exec(noeud.nodeValue || '');
+        }
+        if (mp) { debut = Number(mp[1]); total = Number(mp[3]); }
+        var cle = bib + '|' + debut + '|' + cartesSeries.length + '|' + (cartesSeries[0] && cartesSeries[0].getAttribute('data-id'));
+        if (grille.getAttribute('data-wf-cycles') === cle) return;
+        if (grille.getAttribute('data-wf-cycles') === 'en-cours') return;
+        grille.setAttribute('data-wf-cycles', 'en-cours');
         if (!seriesParBib[bib]) {
             seriesParBib[bib] = json('Users/' + uid() + '/Items', {
                 ParentId: bib, Recursive: true, IncludeItemTypes: 'Series', EnableImages: false, EnableUserData: false
@@ -1214,21 +1231,45 @@
             seriesParBib[bib].catch(function () { delete seriesParBib[bib]; });
         }
         Promise.all([charger(), seriesParBib[bib]]).then(function (r) {
+            grille.querySelectorAll('.wf-cycle-bib').forEach(function (x) { x.remove(); });
             var ici = r[1];
             var cycles = r[0].filter(function (c) {
                 return c.type === 'c' && c.ids.length && (c.series || []).some(function (id) { return ici[id]; });
             });
-            if (!cycles.length || !grille.isConnected) { hote.setAttribute('data-wf-cycles', 'aucun-' + bib); return; }
-            hote.setAttribute('data-wf-cycles', 'fait');
-            var tmp = document.createElement('div');
-            tmp.innerHTML = rangee(NOMS.c.plusieurs, cycles.map(function (c) {
-                return carte({ id: c.id, nom: c.nom, tag: c.tag, sous: compte(c) });
-            }), 'bib-cycles', '#/home?wf=cycles');
-            var sec = tmp.firstChild;
-            sec.setAttribute('data-bib', bib);
-            hote.insertBefore(sec, grille);
-            images(sec);
-        }).catch(function () { hote.removeAttribute('data-wf-cycles'); });
+            var cartes = Array.prototype.slice.call(grille.querySelectorAll('.card[data-type="Series"]'));
+            if (!cycles.length || !cartes.length || !grille.isConnected) { grille.setAttribute('data-wf-cycles', cle); return; }
+            var noms = cartes.map(function (c) {
+                var t = c.querySelector('.cardText-first');
+                return nomTri(t ? t.textContent : '');
+            });
+            // La grille est-elle triée par nom (A→Z) ? Sinon les cycles vont en tête de la première page
+            var triee = noms.every(function (n, k) { return !k || noms[k - 1].localeCompare(n, 'fr') <= 0; });
+            var premierePage = debut <= 1;
+            var dernierePage = !total || debut + cartes.length - 1 >= total;
+            var modele = cartes[0].className;
+            cycles.sort(function (a, b) { return nomTri(a.nom).localeCompare(nomTri(b.nom), 'fr'); }).forEach(function (c) {
+                var n = nomTri(c.nom);
+                var avant = null;
+                if (triee) {
+                    var k = 0;
+                    while (k < noms.length && noms[k].localeCompare(n, 'fr') <= 0) k++;
+                    if (k === 0 && !premierePage) return;              // appartient à une page précédente
+                    if (k === noms.length && !dernierePage) return;    // appartient à une page suivante
+                    avant = cartes[k] || null;
+                } else {
+                    if (!premierePage) return;
+                    avant = cartes[0];
+                }
+                var tmp = document.createElement('div');
+                tmp.innerHTML = carte({ id: c.id, nom: c.nom, tag: c.tag, sous: 'Cycle · ' + compte(c) });
+                var el = tmp.firstChild;
+                el.className = modele + ' wf-carte wf-cycle-bib';
+                el.setAttribute('data-type', 'BoxSet');
+                if (avant) grille.insertBefore(el, avant); else grille.appendChild(el);
+            });
+            images(grille);
+            grille.setAttribute('data-wf-cycles', cle);
+        }).catch(function () { grille.removeAttribute('data-wf-cycles'); });
     }
 
     /* ---------- Orchestration ---------- */
