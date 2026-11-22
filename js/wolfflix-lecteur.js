@@ -1957,6 +1957,40 @@
         calculerComptes().then(corrigerTextes);
     }
 
+    /* ---------- Dossiers de livres sans affiche (saga, cycle, webtoon) ----------
+       Jellyfin montre une icône grise pour un dossier sans folder.jpg (et « Ajouts récents »
+       regroupe souvent les livres par dossier). On y met la couverture du premier livre. */
+    var couvDossiers = {};
+    function couverturesDossiers() {
+        if (!api()) return;
+        document.querySelectorAll('.card[data-type="Folder"][data-id]:not([data-wf-couv])').forEach(function (carte) {
+            var cont = carte.querySelector('.cardImageContainer');
+            if (!cont || !carte.querySelector('.cardImageIcon')) { carte.setAttribute('data-wf-couv', '0'); return; }
+            carte.setAttribute('data-wf-couv', '1');
+            var id = carte.getAttribute('data-id');
+            if (!couvDossiers[id]) {
+                couvDossiers[id] = json('Users/' + uid() + '/Items', {
+                    ParentId: id, Recursive: true, IncludeItemTypes: 'Book', ImageTypes: 'Primary',
+                    SortBy: 'SortName', SortOrder: 'Ascending', Limit: 1, EnableUserData: false
+                }).then(function (r) {
+                    var b = (r.Items || [])[0];
+                    return b && b.ImageTags && b.ImageTags.Primary
+                        ? url('Items/' + b.Id + '/Images/Primary', { tag: b.ImageTags.Primary, maxHeight: 480, quality: 90 }) : null;
+                }).catch(function () { return null; });
+            }
+            couvDossiers[id].then(function (u) {
+                if (!u) return;
+                cont.style.backgroundImage = 'url("' + u + '")';
+                cont.style.backgroundSize = 'cover';
+                cont.style.backgroundPosition = 'center';
+                cont.classList.add('coveredImage');
+                cont.className = cont.className.replace(/\bdefaultCardBackground\d*\b/g, '');
+                var icone = carte.querySelector('.cardImageIcon');
+                if (icone) icone.style.display = 'none';
+            });
+        });
+    }
+
     window.WolfFlix = window.WolfFlix || {};
     window.WolfFlix.lire = function (id, options) { return ouvrirParId(id, options); };
 
@@ -1965,6 +1999,7 @@
         if (config.ordreLecture !== false) window.WolfFlix.abonner(ordonnerDossiersLivres);
         if (config.regrouperChapitres !== false) window.WolfFlix.abonner(regrouperChapitres);
         if (config.compterWebtoons !== false) window.WolfFlix.abonner(suivreComptes);
+        window.WolfFlix.abonner(couverturesDossiers);
     }
     else {
         var minuterieSecours = null;
@@ -1975,6 +2010,7 @@
                 if (config.ordreLecture !== false) ordonnerDossiersLivres();
                 if (config.regrouperChapitres !== false) regrouperChapitres();
                 if (config.compterWebtoons !== false) suivreComptes();
+                couverturesDossiers();
             }, 150);
         }).observe(document.body, { childList: true, subtree: true });
     }

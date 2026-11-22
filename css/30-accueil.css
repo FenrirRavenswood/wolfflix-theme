@@ -506,11 +506,16 @@ html.wf-accueil .MuiToolbar-root .MuiButton-root:not([href="#/"]) {
     hyphens: auto;
 }
 
-/* Le lien du titre suit le retour à la ligne */
+/* Le lien du titre suit le retour à la ligne (Jellyfin lui met parfois sa propre coupure « … ») */
 .cardText.cardText-first a,
 .cardText.cardText-first bdi,
-.cardText.cardText-first button {
+.cardText.cardText-first button,
+.cardText.cardText-first .textActionButton {
     white-space: normal !important;
+    display: inline !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
 }
 
 /* Listes (épisodes, chapitres, recherche) : le titre passe aussi à la ligne */

@@ -19,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v2.5.1';
+    var VERSION = 'v2.5.2';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -318,17 +318,28 @@
     }
     /* Titre d'une fiche : une seule ligne, en entier. S'il dépasse, sa taille est réduite
        juste assez pour tenir (jamais en dessous de 13 px). */
+    function largeurTexte(t) {
+        var r = document.createRange();
+        r.selectNodeContents(t);
+        return r.getBoundingClientRect().width;
+    }
     function ajusterTitres() {
         document.querySelectorAll('.itemDetailPage:not(.hide) .nameContainer .itemName:not(.hide), .itemDetailPage:not(.hide) .nameContainer .parentName:not(.hide)').forEach(function (t) {
-            var parent = t.parentNode;
-            var largeur = parent ? parent.clientWidth : 0;
-            if (!largeur) return;
-            var cle = (t.textContent || '') + '|' + largeur + '|' + window.innerWidth;
+            var boite = t.closest('.infoWrapper') || t.closest('.detailRibbon') || t.parentNode;
+            var ecran = document.documentElement.clientWidth || window.innerWidth;
+            var gauche = t.getBoundingClientRect().left;
+            // Place réelle : jusqu'au bord du bandeau, sans jamais dépasser l'écran
+            var droite = Math.min(boite.getBoundingClientRect().right, ecran - 10);
+            var dispo = Math.floor(droite - gauche);
+            if (dispo < 40) return;
+            var cle = (t.textContent || '') + '|' + dispo + '|' + ecran;
             if (t.getAttribute('data-wf-ajuste') === cle) return;
             t.style.fontSize = '';
             var taille = parseFloat(getComputedStyle(t).fontSize) || 16;
-            for (var i = 0; i < 6 && t.scrollWidth > largeur + 1 && taille > 13; i++) {
-                taille = Math.max(13, Math.floor(taille * largeur / t.scrollWidth * 0.98));
+            for (var i = 0; i < 8; i++) {
+                var l = largeurTexte(t);
+                if (l <= dispo || taille <= 12) break;
+                taille = Math.max(12, Math.floor(taille * dispo / l * 0.97));
                 t.style.fontSize = taille + 'px';
             }
             t.setAttribute('data-wf-ajuste', cle);
