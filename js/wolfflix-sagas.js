@@ -1189,11 +1189,33 @@
 
     /* ---------- Bibliothèque Séries : les cycles au milieu des séries ----------
        Comme les sagas dans Films : chaque cycle prend sa place alphabétique dans la grille.
+       L'ordre est donné par Jellyfin lui-même (séries et cycles triés ensemble par nom),
+       et chaque cycle n'apparaît que sur la page qui contient la série qui le suit.
        Ses séries restent aussi affichées. Le cycle n'est pas compté dans « 1-100 de 127 ». */
-    var seriesParBib = {};
-    function nomTri(t) {
-        return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .replace(/^(the|a|an)\s+/, '').trim();
+    var ordreParBib = {};
+    function ordreBibliotheque(bib) {
+        if (ordreParBib[bib] && Date.now() - ordreParBib[bib].quand < 120000) return ordreParBib[bib].p;
+        var p = Promise.all([charger(), json('Users/' + uid() + '/Items', {
+            ParentId: bib, Recursive: true, IncludeItemTypes: 'Series', EnableImages: false, EnableUserData: false
+        })]).then(function (r) {
+            var series = (r[1].Items || []).map(function (i) { return i.Id; });
+            var ici = {};
+            series.forEach(function (id) { ici[id] = true; });
+            var cycles = r[0].filter(function (c) {
+                return c.type === 'c' && c.ids.length && (c.series || []).some(function (id) { return ici[id]; });
+            });
+            if (!cycles.length) return { cycles: [], ordre: [] };
+            // Jellyfin trie lui-même séries + cycles ensemble, avec ses propres règles (articles, accents…)
+            return json('Users/' + uid() + '/Items', {
+                Ids: series.concat(cycles.map(function (c) { return c.id; })).join(','),
+                SortBy: 'SortName', SortOrder: 'Ascending', EnableImages: false, EnableUserData: false
+            }).then(function (t) {
+                return { cycles: cycles, ordre: (t.Items || []).map(function (i) { return i.Id; }) };
+            });
+        });
+        ordreParBib[bib] = { quand: Date.now(), p: p };
+        p.catch(function () { delete ordreParBib[bib]; });
+        return p;
     }
     function cyclesBibliotheque() {
         var h = location.hash || '';
@@ -1205,60 +1227,40 @@
             return visible(c) && c.querySelector('.card[data-type="Series"]');
         })[0];
         if (!grille) return;
-        var cartesSeries = grille.querySelectorAll('.card[data-type="Series"]');
-        // Position dans la liste : « 101-127 de 127 » → page qui commence à 101
-        var debut = 1, total = 0, mp = null;
-        var pageActive = grille.closest('.page') || document.body;
-        var marche = document.createTreeWalker(pageActive, NodeFilter.SHOW_TEXT);
-        var noeud;
-        while (!mp && (noeud = marche.nextNode())) {
-            if (grille.contains(noeud)) continue;
-            mp = /^\s*(\d+)\s*[-\u2013]\s*(\d+)\s+\S+\s+(\d+)\s*$/.exec(noeud.nodeValue || '');
-        }
-        if (mp) { debut = Number(mp[1]); total = Number(mp[3]); }
-        var cle = bib + '|' + debut + '|' + cartesSeries.length + '|' + (cartesSeries[0] && cartesSeries[0].getAttribute('data-id'));
-        if (grille.getAttribute('data-wf-cycles') === cle) return;
-        if (grille.getAttribute('data-wf-cycles') === 'en-cours') return;
+        var cartes = Array.prototype.slice.call(grille.querySelectorAll('.card[data-type="Series"][data-id]'));
+        var cle = bib + '|' + cartes.length + '|' + cartes.map(function (c) { return c.getAttribute('data-id'); }).join('').length +
+            '|' + (cartes[0] && cartes[0].getAttribute('data-id')) + '|' + (cartes[cartes.length - 1] && cartes[cartes.length - 1].getAttribute('data-id'));
+        var etatGrille = grille.getAttribute('data-wf-cycles');
+        if (etatGrille === cle || etatGrille === 'en-cours') return;
         grille.setAttribute('data-wf-cycles', 'en-cours');
-        if (!seriesParBib[bib]) {
-            seriesParBib[bib] = json('Users/' + uid() + '/Items', {
-                ParentId: bib, Recursive: true, IncludeItemTypes: 'Series', EnableImages: false, EnableUserData: false
-            }).then(function (r) {
-                var e = {};
-                (r.Items || []).forEach(function (i) { e[i.Id] = true; });
-                return e;
-            });
-            seriesParBib[bib].catch(function () { delete seriesParBib[bib]; });
-        }
-        Promise.all([charger(), seriesParBib[bib]]).then(function (r) {
+        ordreBibliotheque(bib).then(function (o) {
             grille.querySelectorAll('.wf-cycle-bib').forEach(function (x) { x.remove(); });
-            var ici = r[1];
-            var cycles = r[0].filter(function (c) {
-                return c.type === 'c' && c.ids.length && (c.series || []).some(function (id) { return ici[id]; });
-            });
-            var cartes = Array.prototype.slice.call(grille.querySelectorAll('.card[data-type="Series"]'));
-            if (!cycles.length || !cartes.length || !grille.isConnected) { grille.setAttribute('data-wf-cycles', cle); return; }
-            var noms = cartes.map(function (c) {
-                var t = c.querySelector('.cardText-first');
-                return nomTri(t ? t.textContent : '');
-            });
-            // La grille est-elle triée par nom (A→Z) ? Sinon les cycles vont en tête de la première page
-            var triee = noms.every(function (n, k) { return !k || noms[k - 1].localeCompare(n, 'fr') <= 0; });
-            var premierePage = debut <= 1;
-            var dernierePage = !total || debut + cartes.length - 1 >= total;
+            if (!o.cycles.length || !grille.isConnected) { grille.setAttribute('data-wf-cycles', cle); return; }
+            var rang = {};
+            o.ordre.forEach(function (id, k) { rang[id] = k; });
+            var surPage = {};
+            cartes.forEach(function (c) { surPage[c.getAttribute('data-id')] = c; });
+            // La grille doit être triée par nom, dans le même ordre que Jellyfin ; sinon on n'insère rien
+            var rangs = cartes.map(function (c) { return rang[c.getAttribute('data-id')]; });
+            var triee = rangs.every(function (r, k) { return r !== undefined && (!k || rangs[k - 1] < r); });
+            if (!triee) { grille.setAttribute('data-wf-cycles', cle); return; }
+            var estCycle = {};
+            o.cycles.forEach(function (c) { estCycle[c.id] = c; });
+            var derniereSerie = null;
+            o.ordre.forEach(function (id) { if (!estCycle[id]) derniereSerie = id; });
             var modele = cartes[0].className;
-            cycles.sort(function (a, b) { return nomTri(a.nom).localeCompare(nomTri(b.nom), 'fr'); }).forEach(function (c) {
-                var n = nomTri(c.nom);
+            o.ordre.forEach(function (id, k) {
+                var c = estCycle[id];
+                if (!c) return;
+                // Série qui suit le cycle dans l'ordre de Jellyfin
+                var suivante = null;
+                for (var n = k + 1; n < o.ordre.length; n++) { if (!estCycle[o.ordre[n]]) { suivante = o.ordre[n]; break; } }
                 var avant = null;
-                if (triee) {
-                    var k = 0;
-                    while (k < noms.length && noms[k].localeCompare(n, 'fr') <= 0) k++;
-                    if (k === 0 && !premierePage) return;              // appartient à une page précédente
-                    if (k === noms.length && !dernierePage) return;    // appartient à une page suivante
-                    avant = cartes[k] || null;
-                } else {
-                    if (!premierePage) return;
-                    avant = cartes[0];
+                if (suivante) {
+                    if (!surPage[suivante]) return;          // le cycle appartient à une autre page
+                    avant = surPage[suivante];
+                } else if (!surPage[derniereSerie]) {
+                    return;                                  // cycle tout à la fin : seulement sur la dernière page
                 }
                 var tmp = document.createElement('div');
                 tmp.innerHTML = carte({ id: c.id, nom: c.nom, tag: c.tag, sous: 'Cycle · ' + compte(c) });
