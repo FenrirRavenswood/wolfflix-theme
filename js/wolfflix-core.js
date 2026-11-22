@@ -19,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v2.4.0';
+    var VERSION = 'v2.5.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -308,10 +308,11 @@
     }
     /* Titre complet au survol, pour les titres encore trop longs même sur deux lignes */
     function titresComplets() {
-        document.querySelectorAll('.cardText-first:not([data-wf-titre]), .listItemBodyText:not([data-wf-titre])').forEach(function (t) {
+        document.querySelectorAll('.cardText-first, .listItemBodyText, .nameContainer .itemName').forEach(function (t) {
             var texte = (t.textContent || '').trim();
-            t.setAttribute('data-wf-titre', '1');
-            if (texte && !t.getAttribute('title')) t.setAttribute('title', texte);
+            if (t.getAttribute('data-wf-titre') === texte) return;
+            t.setAttribute('data-wf-titre', texte);
+            if (texte) t.setAttribute('title', texte); else t.removeAttribute('title');
         });
     }
     function planifier() {

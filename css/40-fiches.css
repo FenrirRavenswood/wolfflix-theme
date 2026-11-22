@@ -357,3 +357,66 @@
 .selectVideoContainer {
     display: none !important;
 }
+
+/* ---------- Titre long sur une fiche : il passe à la ligne au lieu d'être coupé ----------
+   Le bandeau passe aussi à la ligne : si le titre et les boutons ne tiennent pas côte à côte,
+   les boutons descendent sous le titre. */
+.itemDetailPage .detailRibbon {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    column-gap: 1.4em;
+    row-gap: 0.7em;
+}
+
+.itemDetailPage .detailRibbon .infoWrapper {
+    flex: 1 1 24em !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: auto !important;
+}
+
+.itemDetailPage .detailRibbon .mainDetailButtons {
+    flex: 0 1 auto !important;
+    flex-wrap: wrap !important;
+    margin-left: 0 !important;
+}
+
+.itemDetailPage .nameContainer {
+    max-width: 100% !important;
+    overflow: visible !important;
+}
+
+.itemDetailPage .nameContainer .itemName,
+.itemDetailPage .nameContainer .parentName,
+.itemDetailPage .parentNameLast {
+    white-space: normal !important;
+    text-overflow: clip !important;
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    font-size: clamp(1.6em, 2.5vw, 2.6em) !important;
+    line-height: 1.12 !important;
+    padding-top: 0.08em;
+    margin-bottom: 0.15em;
+}
+
+/* Téléphone : titre un peu plus petit, jusqu'à 4 lignes, boutons en dessous */
+@media all and (max-width: 600px) {
+    .itemDetailPage .detailRibbon .infoWrapper {
+        flex-basis: 100% !important;
+    }
+
+    .itemDetailPage .nameContainer .itemName,
+    .itemDetailPage .nameContainer .parentName,
+    .itemDetailPage .parentNameLast {
+        font-size: 1.55em !important;
+        -webkit-line-clamp: 4;
+        line-clamp: 4;
+    }
+}
