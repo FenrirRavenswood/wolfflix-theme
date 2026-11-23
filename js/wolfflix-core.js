@@ -19,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v2.6.3';
+    var VERSION = 'v2.6.4';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -256,6 +256,37 @@
         } catch (e) { /* stockage indisponible */ }
     }
 
+    /* ---------- Diagnostic : montre l'élément réellement touché (téléphone) ----------
+       Activé par « testClics: true » dans JS Injector. Chaque appui affiche en haut de l'écran
+       l'élément qui reçoit le toucher et ses parents, pour trouver ce qui bloque un clic. */
+    function testClics() {
+        function decrire(el) {
+            if (!el || !el.tagName) return '?';
+            var st = getComputedStyle(el);
+            return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') +
+                (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).slice(0, 4).join('.') : '') +
+                (st.position !== 'static' ? ' [' + st.position + (st.zIndex !== 'auto' ? ' z' + st.zIndex : '') + ']' : '') +
+                (st.pointerEvents === 'none' ? ' [sans clic]' : '');
+        }
+        document.addEventListener('pointerdown', function (e) {
+            var el = document.elementFromPoint(e.clientX, e.clientY);
+            var lignes = [];
+            for (var n = el, k = 0; n && n !== document.body && k < 7; n = n.parentElement, k++) lignes.push(decrire(n));
+            var lien = el && el.closest && el.closest('a[href], [data-action], button, .itemAction');
+            var b = document.getElementById('wf-test-clics');
+            if (!b) {
+                b = document.createElement('pre');
+                b.id = 'wf-test-clics';
+                b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;margin:0;padding:6px 8px;font:11px/1.35 monospace;' +
+                    'white-space:pre-wrap;word-break:break-all;color:#fff;background:rgba(120,0,0,.92);pointer-events:none';
+                document.body.appendChild(b);
+            }
+            b.textContent = 'Touché : ' + lignes.join('\n  dans ') +
+                '\nLien / action : ' + (lien ? decrire(lien) + (lien.getAttribute('href') ? ' → ' + lien.getAttribute('href').slice(0, 60) : '') +
+                (lien.getAttribute('data-action') ? ' (action ' + lien.getAttribute('data-action') + ')' : '') : 'AUCUN');
+        }, true);
+    }
+
     /* ---------- 3e. Module Sagas & Cycles ---------- */
     function chargerModules() {
         window.WolfFlix = {
@@ -269,6 +300,7 @@
             quandCalme: quandCalme
         };
         var config = window.WolfFlixConfig || {};
+        if (config.testClics || /wftest/.test(location.hash || '')) testClics();
         var modules = [];
         if (config.sagas !== false) modules.push('sagas');
         if (config.bandesAnnonces !== false) modules.push('bandes-annonces');
