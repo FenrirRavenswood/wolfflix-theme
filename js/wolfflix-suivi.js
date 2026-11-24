@@ -65,6 +65,10 @@
     }
     function periode(vue, ref) {
         var debut, fin, titre;
+        if (vue === 'tout') {
+            var premiere = (etat.lectures || []).reduce(function (m, l) { return !m || l.date < m ? l.date : m; }, null);
+            return { debut: new Date(0), fin: new Date(8640000000000000), titre: premiere ? 'Depuis le ' + premiere.toLocaleDateString('fr-FR') : 'Depuis le début', tout: true };
+        }
         if (vue === 'annee') {
             debut = new Date(ref.getFullYear(), 0, 1);
             fin = new Date(ref.getFullYear() + 1, 0, 1);
@@ -85,6 +89,7 @@
     }
     function decaler(vue, ref, sens) {
         var d = new Date(ref);
+        if (vue === 'tout') return d;
         if (vue === 'annee') d.setFullYear(d.getFullYear() + sens);
         else if (vue === 'mois') d.setMonth(d.getMonth() + sens, 1);
         else d.setDate(d.getDate() + 7 * sens);
@@ -185,12 +190,12 @@
         var liste = dans(retenues(), p).sort(function (a, b) { return b.date - a.date; });
         var s = stats(liste);
         var out = '<div class="wf-su-nav">' +
-            '<div class="wf-av-onglets">' + [['annee', 'Année'], ['mois', 'Mois'], ['semaine', 'Semaine']].map(function (v) {
+            '<div class="wf-av-onglets">' + [['tout', 'Global'], ['annee', 'Année'], ['mois', 'Mois'], ['semaine', 'Semaine']].map(function (v) {
                 return '<button type="button" class="wf-btn' + (etat.vue === v[0] ? ' wf-btn-pri' : '') + '" data-vue="' + v[0] + '">' + v[1] + '</button>';
             }).join('') + '</div>' +
-            '<div class="wf-su-periode"><button type="button" class="wf-fleche" data-sens="-1" aria-label="Période précédente"><span class="material-icons chevron_left"></span></button>' +
+            '<div class="wf-su-periode">' + (p.tout ? '' : '<button type="button" class="wf-fleche" data-sens="-1" aria-label="Période précédente"><span class="material-icons chevron_left"></span></button>') +
             '<b>' + esc(p.titre) + '</b>' +
-            '<button type="button" class="wf-fleche" data-sens="1" aria-label="Période suivante"' + (p.fin > new Date() ? ' disabled' : '') + '><span class="material-icons chevron_right"></span></button></div></div>' +
+            (p.tout ? '' : '<button type="button" class="wf-fleche" data-sens="1" aria-label="Période suivante"' + (p.fin > new Date() ? ' disabled' : '') + '><span class="material-icons chevron_right"></span></button>') + '</div></div>' +
             blocStats(s);
         if (!liste.length) {
             el.innerHTML = out + '<p class="wf-vide">Rien de terminé sur cette période.</p>';
@@ -200,7 +205,8 @@
         var groupes = [], parNom = {};
         liste.forEach(function (l) {
             var nom;
-            if (etat.vue === 'annee') nom = majuscule(MOIS[l.date.getMonth()]);
+            if (etat.vue === 'tout') nom = String(l.date.getFullYear());
+            else if (etat.vue === 'annee') nom = majuscule(MOIS[l.date.getMonth()]);
             else if (etat.vue === 'mois') {
                 var lu = lundi(l.date);
                 var di = new Date(lu);
@@ -214,10 +220,31 @@
             var sg = stats(g.l);
             var resume = ['film', 'episode', 'livre', 'chapitre', 'audio'].filter(function (t) { return sg[t]; })
                 .map(function (t) { return pluriel(sg[t], t); }).join(' · ');
+            if (etat.vue === 'tout') {
+                // Global : une ligne par année (le détail est dans la vue « Année »)
+                return '<section class="wf-su-groupe"><h2>' + esc(g.nom) + ' <small>' + resume + (sg.minutes ? ' · ' + heures(sg.minutes) : '') + '</small></h2>' +
+                    '<button type="button" class="wf-btn wf-btn-sec" data-annee="' + esc(g.nom) + '">Voir ' + esc(g.nom) + ' en détail</button></section>';
+            }
             return '<section class="wf-su-groupe"><h2>' + esc(g.nom) + ' <small>' + resume + '</small></h2><ul>' +
                 regrouper(g.l).map(ligne).join('') + '</ul></section>';
         }).join('');
+        if (etat.vue === 'tout') { var k = out.indexOf('<section class="wf-su-groupe">'); out = out.slice(0, k) + palmares(liste) + out.slice(k); }
         el.innerHTML = out;
+    }
+    // Global : séries les plus suivies et webtoons les plus lus, depuis le début
+    function palmares(liste) {
+        function top(type, n) {
+            var c = {}, noms = {};
+            liste.forEach(function (l) { if (l.t === type && l.p) { c[l.p] = (c[l.p] || 0) + 1; noms[l.p] = l.s; } });
+            return Object.keys(c).sort(function (a, b) { return c[b] - c[a]; }).slice(0, n).map(function (p) {
+                return '<li><a href="' + lien(p) + '">' + esc(noms[p]) + '</a> <small>' + pluriel(c[p], type) + '</small></li>';
+            }).join('');
+        }
+        var series = top('episode', 10), webtoons = top('chapitre', 10);
+        if (!series && !webtoons) return '';
+        return '<div class="wf-su-palmares">' +
+            (series ? '<section><h3>Séries les plus suivies</h3><ol>' + series + '</ol></section>' : '') +
+            (webtoons ? '<section><h3>Webtoons les plus lus</h3><ol>' + webtoons + '</ol></section>' : '') + '</div>';
     }
 
     /* ---------- Progression ---------- */
@@ -486,6 +513,8 @@
             if (o) { etat.onglet = o.getAttribute('data-onglet'); afficher(el); return; }
             var v = e.target.closest('[data-vue]');
             if (v) { etat.vue = v.getAttribute('data-vue'); afficher(el); return; }
+            var an = e.target.closest('[data-annee]');
+            if (an) { etat.vue = 'annee'; etat.ref = new Date(+an.getAttribute('data-annee'), 6, 1); afficher(el); el.scrollTop = 0; return; }
             var s = e.target.closest('[data-sens]');
             if (s && !s.disabled) { etat.ref = decaler(etat.vue, etat.ref, +s.getAttribute('data-sens')); afficher(el); return; }
             if (e.target.closest('.wf-su-bilan')) { bilan(); return; }
