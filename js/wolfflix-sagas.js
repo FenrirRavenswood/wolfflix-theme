@@ -792,8 +792,53 @@
             bloc.querySelectorAll('.wf-ordre-ajouter, .wf-carte-ajout').forEach(function (x) {
                 x.addEventListener('click', function () { editeur(item, enfants, t, bloc, true); });
             });
+            if (admin) titresPerdus(bloc, item, enfants);
         }).catch(function () {
             bloc.remove();
+        });
+    }
+
+    /* ---------- Titres sortis de la collection sans passer par WolfFlix ----------
+       L'ordre enregistré garde la liste des titres. Si Jellyfin en a retiré
+       (fichier remplacé, dossier renommé, nouvelle analyse…), on le signale
+       et on propose de remettre ceux qui existent encore. */
+    function titresPerdus(bloc, item, enfants) {
+        var stocke = ordreStocke(item);
+        if (!stocke || !stocke.length) return;
+        var present = {};
+        enfants.forEach(function (e) { present[e.Id] = true; });
+        var perdus = stocke.filter(function (id) { return !present[id]; });
+        if (!perdus.length) return;
+        json('Users/' + uid() + '/Items', {
+            Ids: perdus.join(','), Fields: 'ProductionYear', EnableImages: false, EnableUserData: false
+        }).catch(function () { return { Items: [] }; }).then(function (r) {
+            var trouves = r.Items || [];
+            var introuvables = perdus.length - trouves.length;
+            var noms = trouves.map(function (i) {
+                return esc((i.SeriesName ? i.SeriesName + ' — ' : '') + i.Name);
+            });
+            var div = document.createElement('div');
+            div.className = 'wf-perdus padded-right';
+            div.innerHTML = '<span class="material-icons warning" aria-hidden="true"></span><div>' +
+                '<strong>' + perdus.length + (perdus.length > 1 ? ' titres ont quitté' : ' titre a quitté') + ' cette collection en dehors de WolfFlix.</strong>' +
+                (noms.length ? '<p>Encore présents dans Jellyfin : ' + noms.join(', ') + '.</p>' : '') +
+                (introuvables ? '<p>' + introuvables + (introuvables > 1 ? ' ne sont plus trouvables' : ' n\'est plus trouvable') +
+                    ' : le fichier ou le dossier a sans doute été remplacé, renommé ou déplacé (Jellyfin lui a donné un nouvel identifiant). Ajoute-le de nouveau avec « Ajouter ».</p>' : '') +
+                '</div>' +
+                (trouves.length ? '<button type="button" class="wf-btn">Les remettre</button>' : '');
+            bloc.insertBefore(div, bloc.querySelector('.wf-rangee'));
+            var b = div.querySelector('button');
+            if (b) b.addEventListener('click', function () {
+                b.disabled = true;
+                api().ajax({ type: 'POST', url: url('Collections/' + item.Id + '/Items', { ids: trouves.map(function (i) { return i.Id; }).join(',') }) }).then(function () {
+                    oublier(item.Id);
+                    toast('Titres remis dans la collection');
+                    bloc.removeAttribute('data-id');
+                    bloc.innerHTML = loupAttente();
+                    bloc.setAttribute('data-id', item.Id);
+                    frais(item.Id).then(function (f) { remplirOrdre(bloc, f, typeForce(f) || 'c'); });
+                }).catch(function () { b.disabled = false; toast('Impossible de les remettre', true); });
+            });
         });
     }
 
@@ -1253,6 +1298,14 @@
             o.ordre.forEach(function (id, k) {
                 var c = estCycle[id];
                 if (!c) return;
+                // Jellyfin affiche déjà la collection (réglage « Regrouper dans des collections ») : pas de doublon
+                var natif = grille.querySelector('.card[data-id="' + id + '"]:not(.wf-cycle-bib)');
+                if (natif) {
+                    natif.classList.add('wf-cycle-natif');
+                    var txt = natif.querySelectorAll('.cardText');
+                    if (txt.length > 1) txt[txt.length - 1].textContent = 'Cycle · ' + compte(c);
+                    return;
+                }
                 // Série qui suit le cycle dans l'ordre de Jellyfin
                 var suivante = null;
                 for (var n = k + 1; n < o.ordre.length; n++) { if (!estCycle[o.ordre[n]]) { suivante = o.ordre[n]; break; } }

@@ -1173,3 +1173,10 @@ html.wf-modale-ouverte body {
     opacity: 0.7;
 }
 .wf-av-ignorer:hover { opacity: 1; border-color: #C73441; }
+
+/* Titres sortis d'une collection en dehors de WolfFlix */
+.wf-perdus { display: flex; gap: .8em; align-items: flex-start; margin: .4em 0 1em; padding: .8em 1em; border: 1px solid rgba(178,34,52,.5); border-left: 3px solid #b22234; border-radius: 6px; background: rgba(178,34,52,.08); }
+.wf-perdus .material-icons { color: #d04050; }
+.wf-perdus > div { flex: 1; }
+.wf-perdus p { margin: .3em 0 0; opacity: .85; font-size: .92em; }
+.wf-perdus .wf-btn { flex-shrink: 0; }
