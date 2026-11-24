@@ -50,10 +50,14 @@
         return fr[0];
     }
 
-    function choisirSousTitres(pistes, audio) {
+    function choisirSousTitres(pistes, audio, analyse) {
+        analyse = analyse || {};
         var st = pistes.filter(function (s) { return s.Type === 'Subtitle' && estFrancais(s) && !RE_SDH.test(texte(s)); });
         var forces = st.filter(function (s) {
-            return s.IsForced || RE_FORCE.test(texte(s)) || (window.WolfFlix && window.WolfFlix.sousTitreForce && window.WolfFlix.sousTitreForce(s));
+            // L'analyse de l'extension WolfFlix (nombre de répliques) passe avant le nom de la piste
+            var a = analyse[String(s.Index)];
+            if (a) return a.classe === 'force';
+            return s.IsForced || RE_FORCE.test(texte(s));
         });
         if (!forces.length) return null; // aucun forcé : aucun sous-titre
         var va = audio ? variante(audio) : 'vff';
@@ -66,10 +70,10 @@
         return forces[0];
     }
 
-    function choisir(source) {
+    function choisir(source, analyse) {
         var pistes = (source && source.MediaStreams) || [];
         var a = choisirAudio(pistes);
-        var s = choisirSousTitres(pistes, a);
+        var s = choisirSousTitres(pistes, a, analyse);
         return { audio: a ? a.Index : null, sousTitres: s ? s.Index : -1 };
     }
 
@@ -102,14 +106,23 @@
         return cacheSources[id];
     }
 
+    // Analyse « forcé / complet » de l'extension WolfFlix, si elle est installée (1,5 s au plus)
+    function analyseDe(id) {
+        var a = api();
+        var demande = a.getJSON(a.getUrl('WolfFlix/Pistes/' + id)).then(function (r) { return r || {}; }, function () { return {}; });
+        var delai = new Promise(function (ok) { setTimeout(function () { ok({}); }, 1500); });
+        return Promise.race([demande, delai]);
+    }
+
     // Modifie l'adresse et le corps de la demande avec nos choix
     function appliquer(url, corps, id) {
         var q = /[?&]MediaSourceId=([^&]+)/i.exec(url);
         var voulu = q ? decodeURIComponent(q[1]).replace(/-/g, '').toLowerCase() : null;
-        return sourcesDe(id).then(function (sources) {
+        return Promise.all([sourcesDe(id), analyseDe(id)]).then(function (r) {
+            var sources = r[0];
             var src = sources.filter(function (s) { return voulu && String(s.Id).replace(/-/g, '').toLowerCase() === voulu; })[0] || sources[0];
             if (!src || !(src.MediaStreams || []).some(function (x) { return x.Type === 'Video'; })) return null; // pas une vidéo
-            var c = choisir(src);
+            var c = choisir(src, r[1]);
             function poser(u, cle, val) {
                 var re = new RegExp('([?&])' + cle + '=[^&]*', 'i');
                 if (re.test(u)) return u.replace(re, '$1' + cle + '=' + val);

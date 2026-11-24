@@ -370,6 +370,136 @@
         });
     }
 
+    var analysePing = {};
+
+    /* ---------- Avis du WolfFlix (extension WolfFlix) ---------- */
+    var CRITERES = [
+        { nom: 'Scénario', aide: 'histoire, cohérence, rythme, enjeux, fin',
+          echelle: ['raté', 'très mauvais', 'faible', 'correct', 'très bon', 'excellent et marquant'] },
+        { nom: 'Personnages / jeu d’acteur', aide: 'interprétations, crédibilité, émotions, attachement aux personnages',
+          echelle: ['raté', 'mauvais', 'moyen', 'correct', 'très convaincant', 'performances exceptionnelles'] },
+        { nom: 'Image / réalisation', aide: 'plans, lumière, couleurs, mise en scène, esthétique, rythme visuel',
+          echelle: ['raté', 'maladroit', 'banal', 'correct', 'très soigné', 'visuellement remarquable'] },
+        { nom: 'Ambiance / musique', aide: 'bande originale, sound design, atmosphère, tension, immersion',
+          echelle: ['ratée', 'mauvaise', 'discrète ou inégale', 'correcte', 'très immersive', 'ambiance parfaite'] },
+        { nom: 'Impact personnel', aide: 'émotion ressentie, mémorabilité, envie de le revoir ou de le recommander',
+          echelle: ['aucun impact', 'désagréable', 'peu d’effet', 'sympa mais oubliable', 'très marquant', 'coup de cœur'] }
+    ];
+    function sur5(n) { return (n === null || n === undefined) ? '–' : Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 2 }); }
+    function etoiles(n) {
+        var r = Math.round(n * 2) / 2, t = '';
+        for (var i = 1; i <= 5; i++) t += r >= i ? '★' : (r >= i - 0.5 ? '½' : '');
+        return t || '0';
+    }
+    function couleurAvis(n) { return styleNote(Math.max(0, Math.min(10, n * 2))); }
+
+    function avisWolfFlix(p, item) {
+        if (p.querySelector('#wf-avis[data-id="' + item.Id + '"]')) return;
+        var cle = 'avis-' + item.Id;
+        une(cle, function () { return json('WolfFlix/Avis/' + item.Id).catch(function () { return null; }); }).then(function (d) {
+            var pp = page();
+            if (!d || !pp || pp.querySelector('#wf-avis[data-id="' + item.Id + '"]')) return;
+            var ancre = pp.querySelector('#wf-notes') || pp.querySelector('.itemDetailsGroup');
+            if (!ancre) return;
+            var bloc = document.createElement('div');
+            bloc.id = 'wf-avis';
+            bloc.setAttribute('data-id', item.Id);
+            bloc.className = 'wf-notes wf-avis';
+            ancre.parentNode.insertBefore(bloc, ancre.nextSibling);
+            dessinerAvis(bloc, item, d, false);
+        });
+    }
+
+    function dessinerAvis(bloc, item, d, ouvert) {
+        var mien = (d.avis || []).filter(function (a) { return a.moi; })[0];
+        var autres = (d.avis || []).filter(function (a) { return !a.moi; });
+        var valeurs = mien ? mien.criteres.slice() : [3, 3, 3, 3, 3];
+
+        var resume = d.nb ? '<div class="wf-avis-criteres">' + CRITERES.map(function (c, i) {
+            var v = d.criteres[i] || 0;
+            return '<div class="wf-avis-critere"><span class="wf-avis-critere-nom">' + esc(c.nom) + '</span>' +
+                '<span class="wf-avis-barre"><span style="width:' + (v / 5 * 100).toFixed(1) + '%;' + couleurAvis(v) + '"></span></span>' +
+                '<span class="wf-avis-critere-val">' + sur5(v) + '</span></div>';
+        }).join('') + '</div>' : '<p class="wf-avis-vide">Pas encore d’avis. Sois le premier !</p>';
+
+        var formulaire = '<form class="wf-avis-form">' +
+            '<h4>' + (mien ? 'Ton avis' : 'Donner ton avis') + '</h4>' +
+            CRITERES.map(function (c, i) {
+                return '<label class="wf-avis-champ"><span class="wf-avis-champ-tete"><b>' + esc(c.nom) + '</b> <small>' + esc(c.aide) + '</small></span>' +
+                    '<span class="wf-avis-curseur"><input type="range" min="0" max="5" step="0.5" value="' + valeurs[i] + '" data-i="' + i + '">' +
+                    '<output>' + sur5(valeurs[i]) + '</output><em>' + esc(c.echelle[Math.floor(valeurs[i])]) + '</em></span></label>';
+            }).join('') +
+            '<label class="wf-avis-champ"><span class="wf-avis-champ-tete"><b>Commentaire</b> <small>facultatif, visible par tous</small></span>' +
+            '<textarea rows="3" maxlength="4000" placeholder="Ce que tu en as pensé…">' + esc(mien ? mien.commentaire : '') + '</textarea></label>' +
+            '<div class="wf-avis-final">Note finale : <strong class="wf-avis-total"></strong> <span class="wf-avis-lb" title="Équivalent Letterboxd (arrondi au demi-point)"></span></div>' +
+            '<div class="wf-avis-actions"><button type="submit" class="wf-avis-btn wf-avis-ok">Enregistrer</button>' +
+            (mien ? '<button type="button" class="wf-avis-btn wf-avis-suppr">Retirer mon avis</button>' : '') + '</div></form>';
+
+        var liste = autres.length ? '<div class="wf-avis-liste"><h4>Les avis</h4>' + autres.map(function (a) {
+            return '<div class="wf-avis-item"><div class="wf-avis-item-tete"><b>' + esc(a.utilisateur) + '</b>' +
+                '<span class="wf-avis-item-note" style="' + couleurAvis(a.note) + '">' + sur5(a.note) + '</span>' +
+                '<small>' + new Date(a.date).toLocaleDateString('fr-FR') + '</small>' +
+                (d.admin ? '<button type="button" class="wf-avis-retirer" data-u="' + esc(a.utilisateurId) + '" title="Retirer cet avis">✕</button>' : '') + '</div>' +
+                '<div class="wf-avis-item-criteres">' + CRITERES.map(function (c, i) { return '<span title="' + esc(c.nom) + '">' + esc(c.nom.split(' ')[0]) + ' ' + sur5(a.criteres[i]) + '</span>'; }).join('') + '</div>' +
+                (a.commentaire ? '<p class="wf-avis-item-texte">' + esc(a.commentaire).replace(/\n/g, '<br>') + '</p>' : '') + '</div>';
+        }).join('') + '</div>' : '';
+
+        bloc.innerHTML = '<button type="button" class="wf-notes-ouvrir" aria-expanded="' + (ouvert ? 'true' : 'false') + '">' +
+            '<span class="material-icons rate_review wf-notes-icone" aria-hidden="true"></span>' +
+            '<span class="wf-notes-titre">Avis du WolfFlix</span>' +
+            (d.nb ? '<span class="wf-notes-moyenne" style="' + couleurAvis(d.moyenne) + '">' + sur5(d.moyenne) + '<small>/5</small></span>' +
+                '<span class="wf-avis-nb">' + d.nb + ' avis</span>' : '<span class="wf-avis-nb">aucun avis</span>') +
+            (d.rang ? '<span class="wf-notes-rang"></span>' : '') +
+            '<span class="material-icons expand_more wf-notes-chevron" aria-hidden="true"></span></button>' +
+            '<div class="wf-notes-contenu"' + (ouvert ? '' : ' hidden') + '>' + resume + formulaire + liste + '</div>';
+        if (ouvert) bloc.classList.add('wf-ouvert');
+        if (d.rang) badgeRang(bloc.querySelector('.wf-notes-rang'), d.rang, d.total);
+        ouvrable(bloc);
+
+        var form = bloc.querySelector('.wf-avis-form');
+        function total() {
+            var v = Array.prototype.map.call(form.querySelectorAll('input[type=range]'), function (x) { return Number(x.value); });
+            var n = v.reduce(function (a, b) { return a + b; }, 0) / v.length;
+            form.querySelector('.wf-avis-total').textContent = sur5(n) + ' / 5';
+            form.querySelector('.wf-avis-total').setAttribute('style', couleurAvis(n));
+            form.querySelector('.wf-avis-lb').textContent = 'Letterboxd ' + etoiles(n);
+            return v;
+        }
+        form.addEventListener('input', function (e) {
+            var x = e.target;
+            if (x.type !== 'range') return;
+            var c = CRITERES[Number(x.getAttribute('data-i'))];
+            x.parentNode.querySelector('output').textContent = sur5(x.value);
+            x.parentNode.querySelector('em').textContent = c.echelle[Math.floor(Number(x.value))];
+            total();
+        });
+        total();
+        function recharger() {
+            oublier(['avis-' + item.Id]);
+            une('avis-' + item.Id, function () { return json('WolfFlix/Avis/' + item.Id); }).then(function (n) { dessinerAvis(bloc, item, n, true); });
+        }
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var b = form.querySelector('.wf-avis-ok');
+            b.disabled = true;
+            api().ajax({
+                type: 'POST', url: url('WolfFlix/Avis/' + item.Id), contentType: 'application/json',
+                data: JSON.stringify({ criteres: total(), commentaire: form.querySelector('textarea').value })
+            }).then(recharger, function () { b.disabled = false; alert('Impossible d’enregistrer l’avis.'); });
+        });
+        var suppr = form.querySelector('.wf-avis-suppr');
+        if (suppr) suppr.addEventListener('click', function () {
+            if (!confirm('Retirer ton avis ?')) return;
+            api().ajax({ type: 'DELETE', url: url('WolfFlix/Avis/' + item.Id) }).then(recharger);
+        });
+        bloc.querySelectorAll('.wf-avis-retirer').forEach(function (b) {
+            b.addEventListener('click', function () {
+                if (!confirm('Retirer cet avis ?')) return;
+                api().ajax({ type: 'DELETE', url: url('WolfFlix/Avis/' + item.Id, { utilisateur: b.getAttribute('data-u') }) }).then(recharger);
+            });
+        });
+    }
+
     /* ---------- Grille des notes + classement ---------- */
     function grille(p, item) {
         if (p.querySelector('#wf-notes[data-id="' + item.Id + '"]')) return;
@@ -865,9 +995,9 @@
         element(id).then(function (item) {
             var pp = page();
             if (!pp) return;
-            ['#wf-prochain', '#wf-notes'].forEach(function (s) {
+            ['#wf-prochain', '#wf-notes', '#wf-avis'].forEach(function (s) {
                 var x = pp.querySelector(s);
-                var garde = item.Type === 'Series' || (s === '#wf-notes' && item.Type === 'Movie');
+                var garde = item.Type === 'Series' || (s !== '#wf-prochain' && item.Type === 'Movie');
                 if (x && (!garde || x.getAttribute('data-id') !== id)) x.remove();
             });
             if (item.Type !== 'Series' || !pp.querySelector('#wf-prochain')) pp.classList.remove('wf-avec-prochain');
@@ -879,10 +1009,17 @@
                 statut(pp, item);
                 prochain(pp, item);
                 grille(pp, item);
+                avisWolfFlix(pp, item);
             } else if (item.Type === 'Season') {
                 saison(pp, item);
             } else if (item.Type === 'Movie') {
                 noteFilm(pp, item);
+                avisWolfFlix(pp, item);
+            }
+            // Fiche d'une vidéo : l'extension analyse ses sous-titres en avance (forcés / complets)
+            if ((item.Type === 'Movie' || item.Type === 'Episode') && !analysePing[item.Id]) {
+                analysePing[item.Id] = true;
+                json('WolfFlix/Pistes/' + item.Id).catch(function () { /* extension absente */ });
             }
         }).catch(function () { /* rien */ });
     }
