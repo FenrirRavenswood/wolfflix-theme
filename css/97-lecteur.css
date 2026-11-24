@@ -963,3 +963,98 @@ html.wf-lecteur-ouvert #wf-trainee {
         animation: none !important;
     }
 }
+
+/* ---------- Lecteur de livres audio (barre en bas, reste ouverte d'une page à l'autre) ---------- */
+html.wf-audio-ouvert body { padding-bottom: 5.6em; }
+html.wf-audio-ouvert .appfooter { bottom: 5.4em; }
+#wf-audio {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3100;
+    color: var(--wf-texte, #E9E6E1);
+    background: linear-gradient(180deg, #16161B, #0A0A0C);
+    border-top: 1px solid rgba(199, 52, 65, 0.55);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    font-family: var(--wf-texte-police, Georgia, serif);
+}
+#wf-audio[hidden] { display: none; }
+.wf-au-progres input {
+    display: block;
+    width: 100%;
+    margin: 0;
+    height: 0.9em;
+    accent-color: #C73441;
+    cursor: pointer;
+}
+.wf-au-ligne {
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+    padding: 0.35em 1em 0.55em;
+}
+.wf-au-image {
+    width: 2.9em;
+    height: 2.9em;
+    flex-shrink: 0;
+    border-radius: 4px;
+    background: #1c1c22 center / cover;
+    box-shadow: 0 0 0 1px rgba(167, 176, 186, 0.2);
+}
+.wf-au-joue .wf-au-image { box-shadow: 0 0 0 1px #C73441, 0 0 12px rgba(199, 52, 65, 0.35); }
+.wf-au-infos { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.wf-au-infos b, .wf-au-infos small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wf-au-infos small { color: var(--wf-acier, #A7B0BA); font-size: 0.8em; }
+.wf-au-temps { font-variant-numeric: tabular-nums; }
+.wf-au-commandes, .wf-au-options { display: flex; align-items: center; gap: 0.2em; flex-shrink: 0; }
+#wf-audio button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4em;
+    height: 2.4em;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+}
+#wf-audio button:hover { background: rgba(233, 230, 225, 0.08); }
+#wf-audio .wf-au-principal { width: 2.9em; height: 2.9em; background: #A3232E; color: #F4F1EC; }
+#wf-audio .wf-au-principal:hover { background: #C73441; }
+#wf-audio select {
+    background: #121216;
+    color: inherit;
+    border: 1px solid rgba(167, 176, 186, 0.3);
+    border-radius: 3px;
+    padding: 0.25em 0.3em;
+    font: inherit;
+    font-size: 0.85em;
+}
+.wf-au-liste {
+    max-height: 45vh;
+    overflow-y: auto;
+    border-top: 1px solid rgba(167, 176, 186, 0.15);
+    padding: 0.3em 0.6em 0.6em;
+}
+.wf-au-liste button {
+    width: 100% !important;
+    height: auto !important;
+    border-radius: 4px !important;
+    justify-content: space-between !important;
+    padding: 0.5em 0.7em !important;
+    text-align: left;
+    gap: 1em;
+}
+.wf-au-liste button.wf-actif { color: #C73441; }
+.wf-au-liste small { color: var(--wf-acier, #A7B0BA); font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) {
+    .wf-au-ligne { flex-wrap: wrap; row-gap: 0.3em; padding: 0.3em 0.6em 0.5em; }
+    .wf-au-infos { flex-basis: calc(100% - 4em); }
+    .wf-au-commandes { order: 3; flex: 1; justify-content: center; }
+    .wf-au-options { order: 4; width: 100%; justify-content: center; }
+    html.wf-audio-ouvert body { padding-bottom: 10em; }
+}

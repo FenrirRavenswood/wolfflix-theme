@@ -346,7 +346,7 @@
 
 /* ---------- Accueil : la barre du haut ne répète pas les grandes tuiles ----------
    La classe wf-accueil est posée par wolfflix-core.js sur la page d'accueil. */
-html.wf-accueil .MuiToolbar-root .MuiButton-root:not([href="#/"]) {
+html.wf-accueil.wf-tuiles .MuiToolbar-root .MuiButton-root:not([href="#/"]) {
     display: none !important;
 }
 

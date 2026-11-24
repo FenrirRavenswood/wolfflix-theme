@@ -19,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v2.12.0';
+    var VERSION = 'v2.13.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -90,7 +90,11 @@
     ];
     function tuiles() {
         if (!html.classList.contains('wf-accueil')) return;
-        document.querySelectorAll('.homeLibraryButtonContainer').forEach(function (c) {
+        // « Mes médias » en grandes cartes (réglage d'affichage, souvent sur ordinateur) : pas de tuiles,
+        // la barre du haut garde alors ses liens (Sagas, Cycles, À venir, Mon suivi)
+        var conteneurs = document.querySelectorAll('.homeLibraryButtonContainer');
+        html.classList.toggle('wf-tuiles', Array.prototype.some.call(conteneurs, function (c) { return c.offsetParent !== null; }));
+        conteneurs.forEach(function (c) {
             TUILES.forEach(function (t) {
                 if (c.querySelector('.wf-tuile-' + t.cle)) return;
                 var a = document.createElement('a');
@@ -337,6 +341,7 @@
         if (config.pistes !== false) modules.push('pistes');
         if (config.aVenir !== false) modules.push('avenir');
         if (config.suivi !== false) modules.push('suivi');
+        if (config.livresAudio !== false) modules.push('audio');
         modules.forEach(function (nom) {
             var id = 'wf-js-' + nom;
             if (document.getElementById(id)) return;
@@ -397,12 +402,19 @@
             var cle = (t.textContent || '') + '|' + dispo + '|' + ecran;
             if (t.getAttribute('data-wf-ajuste') === cle) return;
             t.style.fontSize = '';
+            t.classList.remove('wf-titre-long');
             var taille = parseFloat(getComputedStyle(t).fontSize) || 16;
+            var l = largeurTexte(t);
             for (var i = 0; i < 8; i++) {
-                var l = largeurTexte(t);
-                if (l <= dispo || taille <= 12) break;
-                taille = Math.max(12, Math.floor(taille * dispo / l * 0.97));
+                if (l <= dispo || taille <= 14) break;
+                taille = Math.max(14, Math.floor(taille * dispo / l * 0.97));
                 t.style.fontSize = taille + 'px';
+                l = largeurTexte(t);
+            }
+            // Vraiment trop long (téléphone, affiche à côté) : deux lignes plutôt qu'un titre coupé
+            if (l > dispo + 1) {
+                t.classList.add('wf-titre-long');
+                t.style.fontSize = '17px';
             }
             t.setAttribute('data-wf-ajuste', cle);
         });

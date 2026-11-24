@@ -107,7 +107,41 @@
 
     function cleMemoire() { var a = api(); return 'wf-pistes-groupes-' + (a ? a.getCurrentUserId() : ''); }
     function memoire() { try { return JSON.parse(localStorage.getItem(cleMemoire())) || {}; } catch (e) { return {}; } }
-    function ecrireMemoire(m) { try { localStorage.setItem(cleMemoire(), JSON.stringify(m)); } catch (e) { /* plein */ } }
+    function ecrireMemoire(m, depuisServeur) {
+        if (!depuisServeur) m._d = Date.now();
+        try { localStorage.setItem(cleMemoire(), JSON.stringify(m)); } catch (e) { /* plein */ }
+        if (!depuisServeur) envoyerMemoire(m);
+    }
+    // Synchronisation entre appareils : la mémoire est aussi rangée sur le serveur (préférences d'affichage de l'utilisateur)
+    var PREF = 'wolfflix-pistes', CLIENT_PREF = 'wolfflix';
+    var minuterieEnvoi = null;
+    function envoyerMemoire(m) {
+        clearTimeout(minuterieEnvoi);
+        minuterieEnvoi = setTimeout(function () {
+            var a = api();
+            if (!a) return;
+            var corps = {
+                Id: PREF, Client: CLIENT_PREF, SortBy: 'SortName', SortOrder: 'Ascending', RememberIndexing: false, RememberSorting: false,
+                ScrollDirection: 'Horizontal', ShowBackdrop: false, ShowSidebar: false, PrimaryImageHeight: 250, PrimaryImageWidth: 250,
+                CustomPrefs: { memoire: JSON.stringify(m) }
+            };
+            a.ajax({ type: 'POST', contentType: 'application/json', data: JSON.stringify(corps), url: a.getUrl('DisplayPreferences/' + PREF, { userId: a.getCurrentUserId(), client: CLIENT_PREF }) })
+                .catch(function () { /* reste locale */ });
+        }, 1500);
+    }
+    var synchroFaite = '';
+    function synchroniser() {
+        var a = api();
+        if (!a || synchroFaite === a.getCurrentUserId()) return;
+        synchroFaite = a.getCurrentUserId();
+        a.getJSON(a.getUrl('DisplayPreferences/' + PREF, { userId: a.getCurrentUserId(), client: CLIENT_PREF })).then(function (d) {
+            var serveur = null;
+            try { serveur = d && d.CustomPrefs && d.CustomPrefs.memoire ? JSON.parse(d.CustomPrefs.memoire) : null; } catch (e) { serveur = null; }
+            var local = memoire();
+            if (serveur && (serveur._d || 0) > (local._d || 0)) ecrireMemoire(serveur, true);
+            else if (local._d && (!serveur || (local._d || 0) > (serveur._d || 0))) envoyerMemoire(local);
+        }).catch(function () { synchroFaite = ''; });
+    }
 
     // Groupe d'une vidéo : sa série, ou la saga (collection) qui contient le film
     var groupes = {};
@@ -369,4 +403,7 @@
     // Pour les tests et les autres modules
     window.WolfFlix = window.WolfFlix || {};
     window.WolfFlix.choisirPistes = choisir;
+    synchroniser();
+    window.addEventListener('wf-route', synchroniser);
+    window.addEventListener('focus', function () { synchroFaite = ''; synchroniser(); });
 })();

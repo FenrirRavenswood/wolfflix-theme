@@ -6,7 +6,7 @@
 
 /* ---------- Transitions de page ---------- */
 .page:not(.hide) {
-    animation: wf-page-arrivee 0.42s var(--wf-courbe, cubic-bezier(.2, .8, .2, 1)) both;
+    animation: wf-page-arrivee 0.42s var(--wf-courbe, cubic-bezier(.2, .8, .2, 1)) backwards;
 }
 
 /* Le lecteur vidéo ne doit jamais glisser */
@@ -29,7 +29,7 @@
 
 /* Les fiches : le contenu monte, le fond reste */
 .itemDetailPage:not(.hide) .detailPagePrimaryContainer {
-    animation: wf-page-arrivee 0.55s 0.05s var(--wf-courbe, ease) both;
+    animation: wf-page-arrivee 0.55s 0.05s var(--wf-courbe, ease) backwards;
 }
 
 /* ---------- Onglets : soulignement de sang qui glisse ---------- */
@@ -158,7 +158,7 @@
 .dialog,
 .MuiDialog-paper {
     border-top: 2px solid #A3232E !important;
-    animation: wf-page-arrivee 0.3s var(--wf-courbe, ease) both;
+    animation: wf-page-arrivee 0.3s var(--wf-courbe, ease) backwards;
 }
 
 /* ---------- Mouvement réduit ---------- */
