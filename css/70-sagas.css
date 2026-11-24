@@ -1099,3 +1099,77 @@ html.wf-modale-ouverte body {
         width: 80px;
     }
 }
+
+/* ---------- Page « À venir » / « Ce qui manque » ---------- */
+.wf-av-onglets { display: flex; gap: 0.3em; }
+.wf-av-voir { display: inline-flex; align-items: center; gap: 0.4em; font-size: 0.9em; color: var(--wf-acier, #A7B0BA); }
+.wf-av-corps { padding-top: 0.6em; padding-bottom: 3em; }
+.wf-av-groupe h2 {
+    margin: 1.4em 0 0.7em;
+    font-family: var(--wf-titre, serif);
+    font-weight: 400;
+    font-size: 1.45rem;
+    border-bottom: 1px solid rgba(163, 35, 46, 0.35);
+    padding-bottom: 0.25em;
+}
+.wf-av-groupe h2 a { color: inherit; text-decoration: none; }
+.wf-av-groupe h2 a:hover { color: var(--wf-sang-vif, #C73441); }
+.wf-av-groupe h2 small { font-size: 0.6em; letter-spacing: 0.15em; text-transform: uppercase; color: var(--wf-acier, #A7B0BA); }
+.wf-av-grille {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+    gap: 0.9em;
+}
+.wf-av-carte {
+    display: flex;
+    gap: 0.9em;
+    padding: 0.6em;
+    background: linear-gradient(90deg, rgba(23, 23, 28, 0.95), rgba(15, 15, 18, 0.7));
+    border: 1px solid rgba(167, 176, 186, 0.16);
+    border-left: 3px solid #A3232E;
+    border-radius: 4px;
+}
+.wf-av-carte.wf-av-ignoree { opacity: 0.45; }
+.wf-av-affiche {
+    position: relative;
+    flex: 0 0 92px;
+    aspect-ratio: 2 / 3;
+    border-radius: 3px;
+    overflow: hidden;
+    background: rgba(167, 176, 186, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--wf-acier, #A7B0BA);
+}
+.wf-av-affiche img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wf-av-type {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    padding: 0.1em 0.45em;
+    font-size: 0.7em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: rgba(163, 35, 46, 0.9);
+    color: #fff;
+}
+.wf-av-infos { display: flex; flex-direction: column; gap: 0.3em; min-width: 0; }
+.wf-av-titre { font-family: var(--wf-titre, serif); font-size: 1.1rem; line-height: 1.2; }
+.wf-av-detail { color: var(--wf-acier, #A7B0BA); font-size: 0.9em; }
+.wf-av-date { color: var(--wf-sang-vif, #C73441); font-weight: 700; font-size: 0.92em; }
+.wf-av-lien { font-size: 0.85em; color: inherit; opacity: 0.8; }
+.wf-av-ignorer {
+    align-self: flex-start;
+    margin-top: auto;
+    padding: 0.2em 0.6em;
+    background: none;
+    border: 1px solid rgba(167, 176, 186, 0.3);
+    border-radius: 3px;
+    color: inherit;
+    font: inherit;
+    font-size: 0.8em;
+    cursor: pointer;
+    opacity: 0.7;
+}
+.wf-av-ignorer:hover { opacity: 1; border-color: #C73441; }

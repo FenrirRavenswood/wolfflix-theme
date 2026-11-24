@@ -22,6 +22,7 @@ Thème personnel pour l'interface web de Jellyfin 12.4 : dark fantasy, palette s
 | `js/wolfflix-series.js` | Fiche série : statut, « Prochain épisode / Reprendre / Film lié », grille des notes + classement parmi tes séries ; saisons : films liés ; listes : séries sans fichier masquées | JavaScript |
 | `css/97-lecteur.css` | Lecteur de livres / webtoons, bouton « Infos en ligne » | CSS (+ JS) |
 | `js/wolfflix-lecteur.js` | Lecteur WolfFlix : livres (EPUB, MOBI, AZW3, FB2, PDF), webtoons (défilement continu, chapitres enchaînés), manga/BD (pages, double page, droite → gauche) ; position sauvegardée au mot / au pixel près et synchronisée par le serveur | JavaScript |
+| `js/wolfflix-avenir.js` | Page « À venir » / « Ce qui manque » (données de l'extension WolfFlix) | JavaScript |
 | `js/wolfflix-pistes.js` | Pistes automatiques : audio VFF > VFQ > VO, sous-titres forcés français ou aucun (reconnus aussi par leur nom) | JavaScript |
 | `js/wolfflix-livres-infos.js` | Bouton « Infos en ligne » (admin) : Google Books, OpenLibrary, AniList, MangaDex → résumé, genres, auteurs, couverture | JavaScript |
 | `js/wolfflix-bandes-annonces.js` | Bouton « Bande-annonce » : VF via TMDB, sinon VO, lue dans un lecteur WolfFlix | JavaScript |
@@ -33,20 +34,20 @@ Thème personnel pour l'interface web de Jellyfin 12.4 : dark fantasy, palette s
 Copier tout ce bloc, coller, **Enregistrer** :
 
 ```css
-/* WolfFlix — thème Sang et acier — v2.10.0
+/* WolfFlix — thème Sang et acier — v2.11.0
    À coller dans : Tableau de bord → Général → Code CSS personnalisé
    Pour désactiver un module : mettre sa ligne en commentaire (barre oblique + étoile avant, étoile + barre oblique après). */
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/css/00-fondations.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/css/10-identite.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/css/20-navigation.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/css/30-accueil.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/css/40-fiches.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/css/50-lecteur.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/css/70-sagas.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/css/80-bandes-annonces.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/css/90-series.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/css/95-finitions.css");
-@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/css/97-lecteur.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/css/00-fondations.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/css/10-identite.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/css/20-navigation.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/css/30-accueil.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/css/40-fiches.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/css/50-lecteur.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/css/70-sagas.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/css/80-bandes-annonces.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/css/90-series.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/css/95-finitions.css");
+@import url("https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/css/97-lecteur.css");
 ```
 
 ### 2. JavaScript — Tableau de bord → JS Injector
@@ -74,11 +75,12 @@ window.WolfFlixConfig = {
     ordreLecture: true,                // false = garde le tri par titre de Jellyfin dans les dossiers de livres
     regrouperChapitres: true,          // false = « Ajouts récents » montre chaque chapitre au lieu du webtoon
     compterWebtoons: true,             // false = garde le nombre de livres de Jellyfin (1 chapitre = 1 livre)
-    pistes: true                       // false = laisse Jellyfin choisir l'audio et les sous-titres (sinon VFF > VFQ > VO, forcés FR ou rien)
+    pistes: true,                      // false = laisse Jellyfin choisir l'audio et les sous-titres (sinon VFF > VFQ > VO, forcés FR ou rien)
+    aVenir: true                       // false = retire la page « À venir » (extension WolfFlix nécessaire)
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.11.0/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();
@@ -118,7 +120,7 @@ Ctrl + F5 sur ordinateur ; sur téléphone, fermer et rouvrir l'onglet.
 
 - **Un module** : mettre sa ligne en commentaire, par exemple
   `/* @import url(".../10-identite.css"); */`
-- **Revenir à une version précédente** : remplacer le numéro (`@v2.10.0`) par l'ancien, dans le CSS et dans le script JS Injector.
+- **Revenir à une version précédente** : remplacer le numéro (`@v2.11.0`) par l'ancien, dans le CSS et dans le script JS Injector.
 - **Tout le thème** : vider le champ Code CSS personnalisé, ou y recoller l'ancienne sauvegarde.
 - **Le module JavaScript** : décocher « Enabled » sur le script dans JS Injector.
 - **Pour un seul utilisateur** : Paramètres → Affichage → « Désactiver le code CSS personnalisé fourni par le serveur ».

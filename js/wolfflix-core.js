@@ -19,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v2.10.0';
+    var VERSION = 'v2.11.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -84,6 +84,7 @@
     var TUILES = [
         { cle: 'sagas', href: '#/home?wf=sagas', icone: 'theaters', texte: 'Sagas' },
         { cle: 'cycles', href: '#/home?wf=cycles', icone: 'all_inclusive', texte: 'Cycles' },
+        { cle: 'avenir', href: '#/home?wf=avenir', icone: 'event', texte: 'À venir' },
         { cle: 'favoris', href: '#/home?tab=1', icone: 'favorite', texte: 'Favoris' }
     ];
     function tuiles() {
@@ -104,7 +105,8 @@
     /* ---------- 3a. Liens « Sagas » et « Cycles » dans la barre du haut ---------- */
     var LIENS_NAV = [
         { cle: 'sagas', href: '#/home?wf=sagas', icone: 'theaters', texte: 'Sagas' },
-        { cle: 'cycles', href: '#/home?wf=cycles', icone: 'all_inclusive', texte: 'Cycles' }
+        { cle: 'cycles', href: '#/home?wf=cycles', icone: 'all_inclusive', texte: 'Cycles' },
+        { cle: 'avenir', href: '#/home?wf=avenir', icone: 'event', texte: 'À venir' }
     ];
     function liensNav() {
         var modele = document.querySelector('.MuiToolbar-root a.MuiButton-root[href$="/home?tab=1"]');
@@ -308,6 +310,7 @@
         if (config.lecteur !== false) modules.push('lecteur');
         if (config.livresInfos !== false) modules.push('livres-infos');
         if (config.pistes !== false) modules.push('pistes');
+        if (config.aVenir !== false) modules.push('avenir');
         modules.forEach(function (nom) {
             var id = 'wf-js-' + nom;
             if (document.getElementById(id)) return;
