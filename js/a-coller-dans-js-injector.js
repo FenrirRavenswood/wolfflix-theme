@@ -16,7 +16,7 @@ window.WolfFlixConfig = {
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.9.0/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.10.0/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();

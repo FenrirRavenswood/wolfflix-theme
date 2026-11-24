@@ -5,7 +5,10 @@
        (jamais une piste complète choisie à ta place).
    Les pistes sont reconnues par leur langue, leurs indicateurs ET leur nom
    (« VFF », « TrueFrench », « VFQ », « Québec », « Forcés », « Forced »…).
-   Si tu changes toi-même de piste pendant la lecture, ton choix est respecté.
+   Si tu changes toi-même de piste pendant la lecture, ton choix est respecté, et il est
+   RETENU pour toute la série ou toute la saga (et seulement pour elle) : les épisodes ou
+   films suivants le reprennent, jusqu'à la fin de la série ou de la saga, puis on revient
+   aux règles de base.
    Fonctionne en modifiant la demande de lecture envoyée au serveur (PlaybackInfo) :
    le serveur prépare donc directement les bonnes pistes, même en transcodage. */
 (function () {
@@ -70,7 +73,75 @@
         return forces[0];
     }
 
-    function choisir(source, analyse) {
+    /* ---------- Mémoire par série / saga ---------- */
+    // Une piste décrite de façon transposable d'un fichier à l'autre : langue, variante, type de sous-titre
+    function langue(s) {
+        var l = (s.Language || '').toLowerCase();
+        if (estFrancais(s)) return 'fr';
+        return l.slice(0, 3) || 'und';
+    }
+    function decrireAudio(s) { return s ? { l: langue(s), v: langue(s) === 'fr' ? variante(s) : '' } : null; }
+    function classeSt(s, analyse) {
+        var a = analyse && analyse[String(s.Index)];
+        if (a) return a.classe;
+        if (RE_SDH.test(texte(s))) return 'sdh';
+        return s.IsForced || RE_FORCE.test(texte(s)) ? 'force' : 'complet';
+    }
+    function decrireSt(s, analyse) { return s ? { l: langue(s), c: classeSt(s, analyse), v: langue(s) === 'fr' ? variante(s) : '' } : { aucun: true }; }
+
+    function retrouverAudio(pistes, d) {
+        var a = pistes.filter(function (s) { return s.Type === 'Audio' && !RE_COMMENTAIRE.test(texte(s)) && langue(s) === d.l; });
+        if (!a.length) return undefined;
+        var memeV = a.filter(function (s) { return !d.v || variante(s) === d.v; });
+        var l = memeV.length ? memeV : a;
+        l.sort(function (x, y) { return (y.Channels || 2) - (x.Channels || 2); });
+        return l[0];
+    }
+    function retrouverSt(pistes, d, analyse) {
+        if (d.aucun) return null;
+        var st = pistes.filter(function (s) { return s.Type === 'Subtitle' && langue(s) === d.l && classeSt(s, analyse) === d.c; });
+        if (!st.length) return undefined;
+        var memeV = st.filter(function (s) { return !d.v || variante(s) === d.v; });
+        return (memeV.length ? memeV : st)[0];
+    }
+
+    function cleMemoire() { var a = api(); return 'wf-pistes-groupes-' + (a ? a.getCurrentUserId() : ''); }
+    function memoire() { try { return JSON.parse(localStorage.getItem(cleMemoire())) || {}; } catch (e) { return {}; } }
+    function ecrireMemoire(m) { try { localStorage.setItem(cleMemoire(), JSON.stringify(m)); } catch (e) { /* plein */ } }
+
+    // Groupe d'une vidéo : sa série, ou la saga (collection) qui contient le film
+    var groupes = {};
+    function groupeDe(item) {
+        if (!item) return Promise.resolve(null);
+        if (groupes[item.Id]) return groupes[item.Id];
+        var p;
+        if (item.Type === 'Episode' && item.SeriesId) {
+            p = Promise.resolve({ id: String(item.SeriesId).replace(/-/g, ''), type: 'serie' });
+        } else if (item.Type === 'Movie' && window.WolfFlix && window.WolfFlix.sagaDe) {
+            p = window.WolfFlix.sagaDe(item.Id).then(function (s) { return s ? { id: s.id, type: 'saga', ids: s.ids } : null; }, function () { return null; });
+        } else {
+            p = Promise.resolve(null);
+        }
+        groupes[item.Id] = p;
+        return p;
+    }
+
+    function choisir(source, analyse, prefere) {
+        if (prefere) {
+            var pistes0 = (source && source.MediaStreams) || [];
+            var a0 = prefere.audio ? retrouverAudio(pistes0, prefere.audio) : undefined;
+            var s0 = prefere.st ? retrouverSt(pistes0, prefere.st, analyse) : undefined;
+            var base = choisir(source, analyse, null);
+            return {
+                audio: a0 ? a0.Index : base.audio,
+                sousTitres: s0 === null ? -1 : s0 ? s0.Index : base.sousTitres,
+                memoire: true
+            };
+        }
+        return choisirBase(source, analyse);
+    }
+
+    function choisirBase(source, analyse) {
         var pistes = (source && source.MediaStreams) || [];
         var a = choisirAudio(pistes);
         var s = choisirSousTitres(pistes, a, analyse);
@@ -90,21 +161,83 @@
             var o = typeof corps === 'string' ? JSON.parse(corps) : corps;
             if (o && o.ItemId) delete enCours[String(o.ItemId).replace(/-/g, '').toLowerCase()];
         } catch (e) { /* rien */ }
+        suivreLecture(corps, true);
     }
 
     function api() { return window.ApiClient; }
 
     // Pistes du fichier demandé (version choisie si plusieurs)
-    var cacheSources = {};
-    function sourcesDe(id) {
-        if (cacheSources[id]) return cacheSources[id];
+    var cacheItems = {};
+    function itemDe(id) {
+        if (cacheItems[id]) return cacheItems[id];
         var a = api();
-        cacheSources[id] = a.getJSON(a.getUrl('Users/' + a.getCurrentUserId() + '/Items/' + id)).then(function (it) {
-            setTimeout(function () { delete cacheSources[id]; }, 60000);
-            return (it && it.MediaSources) || [];
-        }, function () { delete cacheSources[id]; return []; });
-        return cacheSources[id];
+        cacheItems[id] = a.getJSON(a.getUrl('Users/' + a.getCurrentUserId() + '/Items/' + id)).then(function (it) {
+            setTimeout(function () { delete cacheItems[id]; }, 60000);
+            return it || null;
+        }, function () { delete cacheItems[id]; return null; });
+        return cacheItems[id];
     }
+    function sourcesDe(id) {
+        return itemDe(id).then(function (it) { return (it && it.MediaSources) || []; });
+    }
+
+    /* ---------- Changements faits à la main pendant la lecture ---------- */
+    var lectures = {}; // itemId → { source, analyse, groupe, audio, sousTitres } (choix au lancement)
+    function suivreLecture(corps, arret) {
+        var o;
+        try { o = typeof corps === 'string' ? JSON.parse(corps) : corps; } catch (e) { return; }
+        if (!o || !o.ItemId) return;
+        var id = String(o.ItemId).replace(/-/g, '').toLowerCase();
+        var l = lectures[id];
+        if (!l) return;
+        var a = o.AudioStreamIndex, st = o.SubtitleStreamIndex;
+        if (st === undefined || st === null) st = -1;
+        if (!l.base) {
+            // Premier rapport du lecteur : c'est le point de départ, pas un changement
+            l.base = true;
+            if (a !== undefined && a !== null) l.audio = a;
+            l.sousTitres = st;
+            if (arret) delete lectures[id];
+            return;
+        }
+        var change = (a !== undefined && a !== null && a !== l.audio) || st !== l.sousTitres;
+        if (change && l.groupe) {
+            // Choix fait à la main : retenu pour toute la série / saga
+            var pistes = l.source.MediaStreams || [];
+            var sa = pistes.filter(function (s) { return s.Type === 'Audio' && s.Index === a; })[0];
+            var ss = st >= 0 ? pistes.filter(function (s) { return s.Type === 'Subtitle' && s.Index === st; })[0] : null;
+            var m = memoire();
+            m[l.groupe.id] = { audio: decrireAudio(sa) || (m[l.groupe.id] || {}).audio || null, st: decrireSt(ss, l.analyse), t: Date.now() };
+            ecrireMemoire(m);
+            l.audio = a;
+            l.sousTitres = st;
+        }
+        if (arret) {
+            finDeGroupe(id, l, o.PositionTicks);
+            delete lectures[id];
+        }
+    }
+
+    // Dernier épisode de la série (ou dernier film de la saga) regardé jusqu'au bout : on oublie le choix
+    function finDeGroupe(id, l, position) {
+        if (!l.groupe) return;
+        itemDe(id).then(function (it) {
+            if (!it || !it.RunTimeTicks || !(position >= it.RunTimeTicks * 0.9)) return null;
+            if (l.groupe.type === 'saga') return l.groupe.ids[l.groupe.ids.length - 1] === it.Id;
+            var a = api();
+            return a.getJSON(a.getUrl('Shows/' + l.groupe.id + '/Episodes', { UserId: a.getCurrentUserId(), Fields: 'Id', EnableImages: false, EnableUserData: false }))
+                .then(function (r) {
+                    var eps = (r.Items || []).filter(function (e) { return e.ParentIndexNumber > 0; });
+                    return eps.length > 0 && eps[eps.length - 1].Id === it.Id;
+                });
+        }).then(function (dernier) {
+            if (!dernier) return;
+            var m = memoire();
+            delete m[l.groupe.id];
+            ecrireMemoire(m);
+        }).catch(function () { /* rien */ });
+    }
+    function estSuivi(u) { return /\/Sessions\/Playing(\/Progress)?(\?|$)/i.test(u || '') && !/Stopped/i.test(u || ''); }
 
     // Analyse « forcé / complet » de l'extension WolfFlix, si elle est installée (1,5 s au plus)
     function analyseDe(id) {
@@ -118,11 +251,14 @@
     function appliquer(url, corps, id) {
         var q = /[?&]MediaSourceId=([^&]+)/i.exec(url);
         var voulu = q ? decodeURIComponent(q[1]).replace(/-/g, '').toLowerCase() : null;
-        return Promise.all([sourcesDe(id), analyseDe(id)]).then(function (r) {
+        return Promise.all([sourcesDe(id), analyseDe(id), itemDe(id).then(groupeDe)]).then(function (r) {
             var sources = r[0];
             var src = sources.filter(function (s) { return voulu && String(s.Id).replace(/-/g, '').toLowerCase() === voulu; })[0] || sources[0];
             if (!src || !(src.MediaStreams || []).some(function (x) { return x.Type === 'Video'; })) return null; // pas une vidéo
-            var c = choisir(src, r[1]);
+            var g = r[2];
+            var prefere = g ? memoire()[g.id] : null;
+            var c = choisir(src, r[1], prefere);
+            lectures[id] = { source: src, analyse: r[1], groupe: g, audio: c.audio, sousTitres: c.sousTitres };
             function poser(u, cle, val) {
                 var re = new RegExp('([?&])' + cle + '=[^&]*', 'i');
                 if (re.test(u)) return u.replace(re, '$1' + cle + '=' + val);
@@ -162,6 +298,7 @@
         window.fetch = function (entree, init) {
             var u = typeof entree === 'string' ? entree : (entree && entree.url) || '';
             if (estArret(u) && init && init.body) noterArret(init.body);
+            else if (estSuivi(u) && init && init.body) suivreLecture(init.body, false);
             var id = idDepuisUrl(u);
             if (!id || typeof entree !== 'string' || enCours[id]) return fetchOrig(entree, init);
             enCours[id] = true;
@@ -213,6 +350,7 @@
         P.send = function (corps) {
             var x = this, w = x.__wf, u = w && String(w.args[1] || '');
             if (estArret(u)) noterArret(corps);
+            else if (estSuivi(u)) suivreLecture(corps, false);
             var id = idDepuisUrl(u);
             if (!id || enCours[id]) return envoyer.apply(x, arguments);
             enCours[id] = true;

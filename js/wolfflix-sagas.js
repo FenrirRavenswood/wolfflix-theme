@@ -1296,6 +1296,14 @@
         prevu = true;
         requestAnimationFrame(function () { prevu = false; tout(); });
     }
+    // Pour les autres modules : la saga (collection de films) qui contient un film, dans l'ordre de la saga
+    window.WolfFlix = window.WolfFlix || {};
+    window.WolfFlix.sagaDe = function (id) {
+        return charger().then(function (cols) {
+            var c = cols.filter(function (x) { return x.type === 's' && x.ids.indexOf(id) !== -1; })[0];
+            return c ? { id: c.id, nom: c.nom, ids: c.ids } : null;
+        });
+    };
     if (window.WolfFlix && window.WolfFlix.abonner) window.WolfFlix.abonner(tout);
     else new MutationObserver(passer).observe(document.body, { childList: true, subtree: true });
     window.addEventListener('wf-route', passer);
