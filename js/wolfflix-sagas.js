@@ -433,7 +433,7 @@
     function page() {
         var m = /^#\/home\?(?:[^#]*&)?wf=(sagas|cycles)/.exec(location.hash || '');
         var el = document.getElementById('wf-page');
-        if (!m && el && el.getAttribute('data-type') === 'avenir') return; // page gérée par wolfflix-avenir.js
+        if (!m && el && /^(avenir|suivi)$/.test(el.getAttribute('data-type') || '')) return; // pages gérées par wolfflix-avenir.js / wolfflix-suivi.js
         if (!m) {
             if (el) el.remove();
             html.classList.remove('wf-page-ouverte');
@@ -442,6 +442,7 @@
         var type = m[1] === 'sagas' ? 's' : 'c';
         if (el) el.style.setProperty('--wf-haut', hautEntete());
         if (el && el.getAttribute('data-type') === type) return;
+        if (el) { el.remove(); el = null; }   // page d'un autre module : on repart d'un élément neuf (sans ses écouteurs)
         if (!el) {
             el = document.createElement('div');
             el.id = 'wf-page';
@@ -1352,6 +1353,7 @@
     }
     // Pour les autres modules : la saga (collection de films) qui contient un film, dans l'ordre de la saga
     window.WolfFlix = window.WolfFlix || {};
+    window.WolfFlix.collections = function () { return charger(); };
     window.WolfFlix.sagaDe = function (id) {
         return charger().then(function (cols) {
             var c = cols.filter(function (x) { return x.type === 's' && x.ids.indexOf(id) !== -1; })[0];

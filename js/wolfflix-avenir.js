@@ -122,7 +122,8 @@
             el.style.setProperty('--wf-haut', hautEntete());
             return;
         }
-        if (!el) {
+        if (el) el.remove();   // page d'un autre module : élément neuf, sans ses écouteurs
+        {
             el = document.createElement('div');
             el.id = 'wf-page';
             document.body.appendChild(el);

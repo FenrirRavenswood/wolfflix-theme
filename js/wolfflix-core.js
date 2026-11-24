@@ -19,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v2.11.1';
+    var VERSION = 'v2.12.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -85,6 +85,7 @@
         { cle: 'sagas', href: '#/home?wf=sagas', icone: 'theaters', texte: 'Sagas' },
         { cle: 'cycles', href: '#/home?wf=cycles', icone: 'all_inclusive', texte: 'Cycles' },
         { cle: 'avenir', href: '#/home?wf=avenir', icone: 'event', texte: 'À venir' },
+        { cle: 'suivi', href: '#/home?wf=suivi', icone: 'insights', texte: 'Mon suivi' },
         { cle: 'favoris', href: '#/home?tab=1', icone: 'favorite', texte: 'Favoris' }
     ];
     function tuiles() {
@@ -106,7 +107,8 @@
     var LIENS_NAV = [
         { cle: 'sagas', href: '#/home?wf=sagas', icone: 'theaters', texte: 'Sagas' },
         { cle: 'cycles', href: '#/home?wf=cycles', icone: 'all_inclusive', texte: 'Cycles' },
-        { cle: 'avenir', href: '#/home?wf=avenir', icone: 'event', texte: 'À venir' }
+        { cle: 'avenir', href: '#/home?wf=avenir', icone: 'event', texte: 'À venir' },
+        { cle: 'suivi', href: '#/home?wf=suivi', icone: 'insights', texte: 'Mon suivi' }
     ];
     function liensNav() {
         var modele = document.querySelector('.MuiToolbar-root a.MuiButton-root[href$="/home?tab=1"]');
@@ -261,7 +263,12 @@
     /* ---------- Diagnostic : montre l'élément réellement touché (téléphone) ----------
        Activé par « testClics: true » dans JS Injector. Chaque appui affiche en haut de l'écran
        l'élément qui reçoit le toucher et ses parents, pour trouver ce qui bloque un clic. */
+    var testActif = false;
     function testClics() {
+        if (testActif) return;
+        testActif = true;
+        try { sessionStorage.setItem('wf-test-clics', '1'); } catch (e) { /* navigation privée */ }
+        var dernier = '';
         function decrire(el) {
             if (!el || !el.tagName) return '?';
             var st = getComputedStyle(el);
@@ -283,11 +290,27 @@
                     'white-space:pre-wrap;word-break:break-all;color:#fff;background:rgba(120,0,0,.92);pointer-events:none';
                 document.body.appendChild(b);
             }
-            b.textContent = 'Touché : ' + lignes.join('\n  dans ') +
+            dernier = 'TEST CLICS WolfFlix ' + VERSION + ' · écran ' + innerWidth + 'x' + innerHeight + '\n' +
+                'Touché : ' + lignes.join('\n  dans ') +
                 '\nLien / action : ' + (lien ? decrire(lien) + (lien.getAttribute('href') ? ' → ' + lien.getAttribute('href').slice(0, 60) : '') +
                 (lien.getAttribute('data-action') ? ' (action ' + lien.getAttribute('data-action') + ')' : '') : 'AUCUN');
+            b.textContent = dernier + '\nClic reçu : en attente…';
+            var page = location.hash;
+            setTimeout(function () {
+                if (b.textContent.indexOf('en attente') !== -1) b.textContent = dernier + '\nClic reçu : NON (le toucher n\'a pas donné de clic)';
+                if (location.hash !== page) b.textContent += '\nPage changée : oui';
+            }, 900);
+        }, true);
+        document.addEventListener('click', function (e) {
+            var b = document.getElementById('wf-test-clics');
+            if (!b) return;
+            setTimeout(function () {
+                b.textContent = dernier + '\nClic reçu : oui sur ' + decrire(e.target) + (e.defaultPrevented ? ' (bloqué par un script)' : '');
+            }, 0);
         }, true);
     }
+    // Pour l'activer sans toucher au JS Injector : ajouter « wftest » à la fin de l'adresse
+    window.addEventListener('hashchange', function () { if (/wftest/.test(location.hash || '')) testClics(); });
 
     /* ---------- 3e. Module Sagas & Cycles ---------- */
     function chargerModules() {
@@ -302,7 +325,9 @@
             quandCalme: quandCalme
         };
         var config = window.WolfFlixConfig || {};
-        if (config.testClics || /wftest/.test(location.hash || '')) testClics();
+        var testDemande = false;
+        try { testDemande = sessionStorage.getItem('wf-test-clics') === '1'; } catch (e) { /* rien */ }
+        if (config.testClics || testDemande || /wftest/.test(location.hash || '')) testClics();
         var modules = [];
         if (config.sagas !== false) modules.push('sagas');
         if (config.bandesAnnonces !== false) modules.push('bandes-annonces');
@@ -311,6 +336,7 @@
         if (config.livresInfos !== false) modules.push('livres-infos');
         if (config.pistes !== false) modules.push('pistes');
         if (config.aVenir !== false) modules.push('avenir');
+        if (config.suivi !== false) modules.push('suivi');
         modules.forEach(function (nom) {
             var id = 'wf-js-' + nom;
             if (document.getElementById(id)) return;
