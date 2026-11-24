@@ -22,6 +22,7 @@ Thème personnel pour l'interface web de Jellyfin 12.4 : dark fantasy, palette s
 | `js/wolfflix-series.js` | Fiche série : statut, « Prochain épisode / Reprendre / Film lié », grille des notes + classement parmi tes séries ; saisons : films liés ; listes : séries sans fichier masquées | JavaScript |
 | `css/97-lecteur.css` | Lecteur de livres / webtoons, bouton « Infos en ligne » | CSS (+ JS) |
 | `js/wolfflix-lecteur.js` | Lecteur WolfFlix : livres (EPUB, MOBI, AZW3, FB2, PDF), webtoons (défilement continu, chapitres enchaînés), manga/BD (pages, double page, droite → gauche) ; position sauvegardée au mot / au pixel près et synchronisée par le serveur | JavaScript |
+| `js/wolfflix-pistes.js` | Pistes automatiques : audio VFF > VFQ > VO, sous-titres forcés français ou aucun (reconnus aussi par leur nom) | JavaScript |
 | `js/wolfflix-livres-infos.js` | Bouton « Infos en ligne » (admin) : Google Books, OpenLibrary, AniList, MangaDex → résumé, genres, auteurs, couverture | JavaScript |
 | `js/wolfflix-bandes-annonces.js` | Bouton « Bande-annonce » : VF via TMDB, sinon VO, lue dans un lecteur WolfFlix | JavaScript |
 
