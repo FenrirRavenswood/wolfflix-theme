@@ -304,14 +304,88 @@
             (pct ? '<span class="wf-prochain-barre"><span style="width:' + pct.toFixed(1) + '%"></span></span>' : '') + '</span>';
     }
 
+    /* ---------- Notes IMDb de l'extension WolfFlix (si elle est installée) ---------- */
+    function notesImdb(id) {
+        return une('imdb-' + id, function () {
+            return json('WolfFlix/Notes/' + id).then(function (r) { return r && r.trouve ? r : null; }, function () { return null; });
+        });
+    }
+    function nombre(n) { return Number(n || 0).toLocaleString('fr-FR'); }
+    function dateMaj(d) {
+        var x = new Date(d);
+        return isNaN(x) || x.getFullYear() < 2000 ? '' : x.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+    }
+    function lienOuTexte(e, contenu, attrs) {
+        return e.Id ? '<a ' + (attrs || '') + ' href="' + lien(e.Id) + '">' + contenu + '</a>' : '<span ' + (attrs || '') + '>' + contenu + '</span>';
+    }
+    function statsImdb(imdb) {
+        var global = imdb.rangGlobal > 0
+            ? '<div class="wf-stat"><span class="wf-stat-valeur">' + nombre(imdb.rangGlobal) + '<small>/' + nombre(imdb.totalGlobal) + '</small></span><span class="wf-stat-libelle">classement IMDb · top ' +
+              Math.max(1, Math.round(imdb.rangGlobal / imdb.totalGlobal * 100)) + ' %</span></div>'
+            : '<div class="wf-stat"><span class="wf-stat-valeur">—</span><span class="wf-stat-libelle">classement IMDb (moins de ' + nombre(imdb.votesMin) + ' votes)</span></div>';
+        return '<div class="wf-stat"><span class="wf-stat-valeur">' + imdb.note.toFixed(1) + ' <small>(' + nombre(imdb.votes) + ' votes)</small></span><span class="wf-stat-libelle">note IMDb</span></div>' +
+            global +
+            '<div class="wf-stat"><span class="wf-stat-valeur">' + imdb.rangWolfFlix + '<small>/' + imdb.totalWolfFlix + '</small></span><span class="wf-stat-libelle">classement WolfFlix · top ' +
+            Math.max(1, Math.round(imdb.rangWolfFlix / imdb.totalWolfFlix * 100)) + ' %</span></div>';
+    }
+    function badgeRang(r, rang, total) {
+        r.hidden = false;
+        r.innerHTML = (rang <= 3 ? '<span class="material-icons workspace_premium" aria-hidden="true"></span>' : '') + rang + '<small>/' + total + '</small>';
+        r.className = 'wf-notes-rang' + (rang <= 3 ? ' wf-podium wf-podium-' + rang : '');
+    }
+    function ouvrable(bloc) {
+        var bouton = bloc.querySelector('.wf-notes-ouvrir');
+        var contenu = bloc.querySelector('.wf-notes-contenu');
+        bouton.addEventListener('click', function () {
+            var ouvert = bouton.getAttribute('aria-expanded') === 'true';
+            bouton.setAttribute('aria-expanded', String(!ouvert));
+            contenu.hidden = ouvert;
+            bloc.classList.toggle('wf-ouvert', !ouvert);
+        });
+    }
+
+    /* ---------- Film : note IMDb et classements ---------- */
+    function noteFilm(p, item) {
+        if (p.querySelector('#wf-notes[data-id="' + item.Id + '"]')) return;
+        notesImdb(item.Id).then(function (imdb) {
+            var pp = page();
+            if (!imdb || !pp || pp.querySelector('#wf-notes[data-id="' + item.Id + '"]')) return;
+            var hote = pp.querySelector('.itemDetailsGroup');
+            if (!hote) return;
+            var bloc = document.createElement('div');
+            bloc.id = 'wf-notes';
+            bloc.setAttribute('data-id', item.Id);
+            bloc.className = 'wf-notes wf-notes-film';
+            bloc.innerHTML = '<button type="button" class="wf-notes-ouvrir" aria-expanded="false">' +
+                '<span class="material-icons star wf-notes-icone" aria-hidden="true"></span>' +
+                '<span class="wf-notes-titre">Note IMDb</span>' +
+                '<span class="wf-notes-moyenne" style="' + styleNote(imdb.note) + '">' + imdb.note.toFixed(1) + '</span>' +
+                '<span class="wf-notes-rang" hidden></span>' +
+                '<span class="material-icons expand_more wf-notes-chevron" aria-hidden="true"></span></button>' +
+                '<div class="wf-notes-contenu" hidden><div class="wf-notes-comparaison">' + statsImdb(imdb) + '</div>' +
+                '<p class="wf-notes-source">Notes IMDb' + (dateMaj(imdb.maj) ? ', mises à jour le ' + dateMaj(imdb.maj) : '') + ' · classement WolfFlix parmi les films de ton serveur.</p></div>';
+            hote.parentNode.insertBefore(bloc, hote.nextSibling);
+            badgeRang(bloc.querySelector('.wf-notes-rang'), imdb.rangWolfFlix, imdb.totalWolfFlix);
+            ouvrable(bloc);
+        });
+    }
+
     /* ---------- Grille des notes + classement ---------- */
     function grille(p, item) {
         if (p.querySelector('#wf-notes[data-id="' + item.Id + '"]')) return;
-        episodes(item.Id).then(function (tous) {
+        Promise.all([episodes(item.Id), notesImdb(item.Id)]).then(function (r) {
+            var tous = r[0], imdb = r[1];
             var pp = page();
             if (!pp || pp.querySelector('#wf-notes[data-id="' + item.Id + '"]')) return;
             var hote = pp.querySelector('.itemDetailsGroup');
             if (!hote) return;
+            // Notes IMDb de l'extension si elle les a, sinon notes des métadonnées de Jellyfin
+            var modeImdb = !!(imdb && imdb.episodes && imdb.episodes.some(function (e) { return e.note > 0; }));
+            if (modeImdb) {
+                tous = imdb.episodes.map(function (e) {
+                    return { ParentIndexNumber: e.s, IndexNumber: e.e, CommunityRating: e.note || 0, Id: e.id || null, Name: e.nom || ('Épisode ' + e.e) };
+                });
+            }
             var eps = tous.filter(function (e) { return e.ParentIndexNumber > 0 && e.IndexNumber > 0; });
             var notees = eps.filter(function (e) { return e.CommunityRating > 0; });
             if (notees.length < 2) return;
@@ -336,8 +410,10 @@
             function cellule(e) {
                 if (!e) return '<td class="wf-note-vide"></td>';
                 var n = e.CommunityRating;
-                if (!(n > 0)) return '<td class="wf-note-sans"><a href="' + lien(e.Id) + '" aria-label="Épisode ' + e.IndexNumber + '">–</a></td>';
-                return '<td class="wf-note" style="' + styleNote(n) + '"><a href="' + lien(e.Id) + '" title="S' + e.ParentIndexNumber + ' · É' + e.IndexNumber + ' — ' + esc(e.Name) + '">' + n.toFixed(1) + '</a></td>';
+                var absent = e.Id ? '' : ' (absent de ton serveur)';
+                if (!(n > 0)) return '<td class="wf-note-sans">' + lienOuTexte(e, '–', 'aria-label="Épisode ' + e.IndexNumber + '"') + '</td>';
+                return '<td class="wf-note' + (e.Id ? '' : ' wf-note-absent') + '" style="' + styleNote(n) + '">' +
+                    lienOuTexte(e, n.toFixed(1), 'title="S' + e.ParentIndexNumber + ' · É' + e.IndexNumber + ' — ' + esc(e.Name) + absent + '"') + '</td>';
             }
             var corps = '';
             for (var k = 1; k <= maxEp; k++) {
@@ -359,11 +435,12 @@
                 '<span class="material-icons expand_more wf-notes-chevron" aria-hidden="true"></span></button>' +
                 '<div class="wf-notes-contenu" hidden>' +
                 '<div class="wf-notes-comparaison">' +
+                (modeImdb ? statsImdb(imdb) :
                 '<div class="wf-stat wf-stat-rang"><span class="wf-stat-valeur">…</span><span class="wf-stat-libelle">Classement parmi tes séries</span></div>' +
-                '<div class="wf-stat wf-stat-ecart"><span class="wf-stat-valeur">…</span><span class="wf-stat-libelle">par rapport à la moyenne de tes séries</span></div>' +
+                '<div class="wf-stat wf-stat-ecart"><span class="wf-stat-valeur">…</span><span class="wf-stat-libelle">par rapport à la moyenne de tes séries</span></div>') +
                 (topSaison ? '<div class="wf-stat"><span class="wf-stat-valeur">S' + topSaison + ' · ' + moySaison[topSaison].toFixed(1) + '</span><span class="wf-stat-libelle">meilleure saison</span></div>' : '') +
-                '<a class="wf-stat" href="' + lien(meilleur.Id) + '"><span class="wf-stat-valeur">S' + meilleur.ParentIndexNumber + 'É' + meilleur.IndexNumber + ' · ' + meilleur.CommunityRating.toFixed(1) + '</span><span class="wf-stat-libelle">meilleur épisode</span></a>' +
-                '<a class="wf-stat" href="' + lien(pire.Id) + '"><span class="wf-stat-valeur">S' + pire.ParentIndexNumber + 'É' + pire.IndexNumber + ' · ' + pire.CommunityRating.toFixed(1) + '</span><span class="wf-stat-libelle">épisode le plus faible</span></a>' +
+                lienOuTexte(meilleur, '<span class="wf-stat-valeur">S' + meilleur.ParentIndexNumber + 'É' + meilleur.IndexNumber + ' · ' + meilleur.CommunityRating.toFixed(1) + '</span><span class="wf-stat-libelle">meilleur épisode</span>', 'class="wf-stat"') +
+                lienOuTexte(pire, '<span class="wf-stat-valeur">S' + pire.ParentIndexNumber + 'É' + pire.IndexNumber + ' · ' + pire.CommunityRating.toFixed(1) + '</span><span class="wf-stat-libelle">épisode le plus faible</span>', 'class="wf-stat"') +
                 '</div>' +
                 '<div class="wf-notes-defile"><table class="wf-notes-table"><thead><tr><th></th>' +
                 nums.map(function (s) { return '<th scope="col">S' + s + '</th>'; }).join('') + '</tr></thead><tbody>' +
@@ -371,18 +448,17 @@
                 '<div class="wf-notes-legende">' + [[9.5, '9.5+'], [9, '9'], [8, '8'], [7, '7'], [6, '6'], [5, '5'], [3, '&lt;5']].map(function (x) {
                     return '<span><i style="' + styleNote(x[0] + 0.3) + '"></i>' + x[1] + '</span>';
                 }).join('') + '</div>' +
-                '<p class="wf-notes-source">' + notees.length + ' épisodes notés · notes issues des métadonnées de ton Jellyfin · couleurs : Jellyfin Episodes Ratings Grid (Damocles-fr).</p>' +
+                '<p class="wf-notes-source">' + notees.length + ' épisodes notés · ' +
+                (modeImdb ? 'notes IMDb' + (dateMaj(imdb.maj) ? ', mises à jour le ' + dateMaj(imdb.maj) : '') + ' (cases pâles : épisodes absents de ton serveur)'
+                    : 'notes issues des métadonnées de ton Jellyfin') + ' · couleurs : Jellyfin Episodes Ratings Grid (Damocles-fr).</p>' +
                 '</div>';
             hote.parentNode.insertBefore(bloc, hote.nextSibling);
 
-            var bouton = bloc.querySelector('.wf-notes-ouvrir');
-            var contenu = bloc.querySelector('.wf-notes-contenu');
-            bouton.addEventListener('click', function () {
-                var ouvert = bouton.getAttribute('aria-expanded') === 'true';
-                bouton.setAttribute('aria-expanded', String(!ouvert));
-                contenu.hidden = ouvert;
-                bloc.classList.toggle('wf-ouvert', !ouvert);
-            });
+            ouvrable(bloc);
+            if (modeImdb) {
+                badgeRang(bloc.querySelector('.wf-notes-rang'), imdb.rangWolfFlix, imdb.totalWolfFlix);
+                return;
+            }
 
             // Classement : moyenne des épisodes, parmi tes séries ayant au moins 3 épisodes notés
             stats().then(function (st) {
@@ -791,7 +867,8 @@
             if (!pp) return;
             ['#wf-prochain', '#wf-notes'].forEach(function (s) {
                 var x = pp.querySelector(s);
-                if (x && (item.Type !== 'Series' || x.getAttribute('data-id') !== id)) x.remove();
+                var garde = item.Type === 'Series' || (s === '#wf-notes' && item.Type === 'Movie');
+                if (x && (!garde || x.getAttribute('data-id') !== id)) x.remove();
             });
             if (item.Type !== 'Series' || !pp.querySelector('#wf-prochain')) pp.classList.remove('wf-avec-prochain');
             if (item.Type !== 'Season') {
@@ -804,6 +881,8 @@
                 grille(pp, item);
             } else if (item.Type === 'Season') {
                 saison(pp, item);
+            } else if (item.Type === 'Movie') {
+                noteFilm(pp, item);
             }
         }).catch(function () { /* rien */ });
     }

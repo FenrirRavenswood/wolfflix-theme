@@ -625,3 +625,7 @@ a.wf-stat:hover {
 .wf-film-lie-vu {
     right: 3em;
 }
+
+/* Notes IMDb : épisode absent du serveur (case plus pâle) */
+.wf-notes-table td.wf-note-absent { opacity: 0.45; }
+.wf-notes-table td.wf-note-absent span { color: inherit; }
