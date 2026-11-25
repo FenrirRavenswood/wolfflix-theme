@@ -813,6 +813,12 @@
         json('Users/' + uid() + '/Items', {
             Ids: perdus.join(','), Fields: 'ProductionYear', EnableImages: false, EnableUserData: false
         }).catch(function () { return { Items: [] }; }).then(function (r) {
+            return reparerVirtuels(bloc, item, r.Items || [], present).then(function (repares) {
+                if (repares) return null;   // corrigé : la fiche est rechargée
+                return r;
+            });
+        }).then(function (r) {
+            if (!r) return;
             var trouves = r.Items || [];
             var introuvables = perdus.length - trouves.length;
             var noms = trouves.map(function (i) {
@@ -841,6 +847,73 @@
                 }).catch(function () { b.disabled = false; toast('Impossible de les remettre', true); });
             });
         });
+    }
+
+    /* Saisons et épisodes « virtuels » : quand Jellyfin crée une saison à partir des métadonnées
+       alors que le dossier existe (numérotation, dossier mal nommé…), il la supprime et la recrée
+       à chaque analyse de la bibliothèque — et elle sort de la collection. On remplace alors,
+       une fois pour toutes, la version virtuelle par la vraie saison (ou le vrai épisode). */
+    function reparerVirtuels(bloc, item, trouves, present) {
+        var virtuels = trouves.filter(function (i) {
+            return i.LocationType === 'Virtual' && (i.Type === 'Season' || i.Type === 'Episode') && i.SeriesId;
+        });
+        if (!virtuels.length) return Promise.resolve(false);
+        return Promise.all(virtuels.map(function (v) {
+            var q = v.Type === 'Season'
+                ? json('Shows/' + v.SeriesId + '/Seasons', { userId: uid(), isMissing: false })
+                : json('Shows/' + v.SeriesId + '/Episodes', { userId: uid(), season: v.ParentIndexNumber, isMissing: false });
+            return q.then(function (r) {
+                var vrai = (r.Items || []).filter(function (x) {
+                    return x.Id !== v.Id && x.LocationType !== 'Virtual' && x.IndexNumber === v.IndexNumber &&
+                        (v.Type === 'Season' || x.ParentIndexNumber === v.ParentIndexNumber);
+                })[0];
+                return vrai ? [v.Id, vrai.Id] : null;
+            }).catch(function () { return null; });
+        })).then(function (paires) {
+            var corresp = {};
+            var aAjouter = [];
+            paires.filter(Boolean).forEach(function (p) {
+                corresp[p[0]] = p[1];
+                if (!present[p[1]] && aAjouter.indexOf(p[1]) === -1) aAjouter.push(p[1]);
+            });
+            if (!Object.keys(corresp).length) return false;
+            var a = api();
+            var etape = aAjouter.length
+                ? a.ajax({ type: 'POST', url: url('Collections/' + item.Id + '/Items', { ids: aAjouter.join(',') }) })
+                : Promise.resolve();
+            return etape.then(function () { return frais(item.Id); }).then(function (c) {
+                var vus = {};
+                var nouv = (jetons(c) || []).map(function (x) { return corresp[x] || x; }).filter(function (x) {
+                    if (!/^[0-9a-f]{32}$/i.test(x)) return true;
+                    if (vus[x]) return false;
+                    vus[x] = true;
+                    return true;
+                });
+                var valeur = nouv.join(',');
+                c.ProviderIds = c.ProviderIds || {};
+                if (c.ProviderIds.WolfFlix || c.ProviderIds.wolfflix || !(c.Tags || []).some(function (t) { return t.indexOf('wfordre:') === 0; })) {
+                    c.ProviderIds.WolfFlix = valeur;
+                    delete c.ProviderIds.wolfflix;
+                } else {
+                    c.Tags = c.Tags.filter(function (t) { return t.indexOf('wfordre:') !== 0; }).concat(['wfordre:' + valeur]);
+                }
+                return a.updateItem(c);
+            }).then(function () {
+                oublier(item.Id);
+                if (window.WolfFlix && window.WolfFlix.oublierElement) window.WolfFlix.oublierElement(item.Id);
+                var n = Object.keys(corresp).length;
+                toast(n > 1 ? n + ' saisons ou épisodes remplacés par leur version réelle' : 'Saison remplacée par sa version réelle (elle ne sortira plus de la collection)');
+                return frais(item.Id).then(function (f) {
+                    if (bloc.isConnected) {
+                        bloc.removeAttribute('data-id');
+                        bloc.innerHTML = loupAttente();
+                        bloc.setAttribute('data-id', item.Id);
+                        remplirOrdre(bloc, f, typeForce(f) || 'c');
+                    }
+                    return true;
+                });
+            });
+        }).catch(function () { return false; });
     }
 
     /* ---------- Panneau d'une saison custom (liste de ses titres, dans l'ordre) ---------- */
