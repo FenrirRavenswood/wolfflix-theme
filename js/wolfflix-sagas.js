@@ -449,6 +449,9 @@
                     var r = res[0];
                     var items = (r && r.Items) || r || [];
                     var ajouts = (ic.__wfSagas || []).map(function (c) { return c.item; }).filter(function (i) {
+                        // Film de saga déjà commencé : il est dans « Continuer de regarder », pas ici
+                        var ud = i.UserData || {};
+                        if (!ud.Played && ud.PlaybackPositionTicks > 0) return false;
                         return !items.some(function (x) { return x.Id === i.Id; });
                     });
                     if (!ajouts.length) return r;
