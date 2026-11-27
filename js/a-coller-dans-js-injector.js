@@ -16,11 +16,12 @@ window.WolfFlixConfig = {
     aVenir: true,                      // false = retire la page « À venir » (extension WolfFlix nécessaire)
     suivi: true,                       // false = retire la page « Mon suivi » (extension WolfFlix 0.5+ nécessaire)
     livresAudio: true,                 // false = garde le lecteur audio de Jellyfin (sinon : « Écouter » sur les livres, lecteur en arrière-plan)
-    repriseLecture: true               // false = garde « Continuer la lecture » de Jellyfin (sinon : chapitre / tome suivant proposé)
+    repriseLecture: true,              // false = garde « Continuer la lecture » de Jellyfin (sinon : chapitre / tome suivant proposé)
+    sante: true                        // false = retire la page « Santé du serveur » (administrateurs, extension WolfFlix 0.7+)
 };
 (function () {
     var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.14.0/js/wolfflix-core.js';
+    s.src = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@v2.15.0/js/wolfflix-core.js';
     s.defer = true;
     document.head.appendChild(s);
 })();

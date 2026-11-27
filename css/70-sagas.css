@@ -1316,3 +1316,44 @@ html.wf-modale-ouverte body {
 .wf-carte-reprise .itemProgressBar { position: absolute; left: 0; right: 0; bottom: 0; }
 .wf-prop input[type="checkbox"] { accent-color: #C73441; }
 .wf-prop a { color: #E9A0A6; }
+
+/* ---------- Santé du serveur (administrateur) ---------- */
+.wf-sa-corps { padding-top: 0.6em; padding-bottom: 3em; }
+.wf-sa-alertes { margin-bottom: 1.4em; padding: 0.9em 1.1em; border: 1px solid rgba(199, 52, 65, 0.6); border-left: 4px solid #C73441; border-radius: 6px; background: rgba(163, 35, 46, 0.12); }
+.wf-sa-alertes header { display: flex; align-items: center; gap: 0.6em; }
+.wf-sa-alertes header b { flex: 1; font-size: 1.05em; }
+.wf-sa-alertes header .material-icons { color: #E05563; }
+.wf-sa-alertes ul { list-style: none; margin: 0.6em 0 0; padding: 0; }
+.wf-sa-alertes li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3em 0.8em; padding: 0.3em 0; border-top: 1px solid rgba(199, 52, 65, 0.2); }
+.wf-sa-alertes time, .wf-sa-alertes small { color: var(--wf-acier, #A7B0BA); font-size: 0.85em; }
+.wf-sa-alertes code { font-family: Consolas, monospace; font-size: 0.9em; word-break: break-all; }
+.wf-sa-ok { display: flex; align-items: center; gap: 0.5em; margin-bottom: 1.4em; padding: 0.7em 1em; border: 1px solid rgba(95, 191, 110, 0.35); border-radius: 6px; color: #9fd9a9; background: rgba(95, 191, 110, 0.06); }
+.wf-sa-titre { font-family: var(--wf-titre, serif); font-weight: 400; font-size: 1.3rem; margin: 0 0 0.6em; }
+.wf-sa-disques { display: grid; grid-template-columns: repeat(auto-fill, minmax(18em, 1fr)); gap: 0.8em; margin-bottom: 1.2em; }
+.wf-sa-disque { padding: 0.8em 1em; border: 1px solid rgba(167, 176, 186, 0.22); border-radius: 6px; background: #121216; }
+.wf-sa-disque-tete { display: flex; justify-content: space-between; gap: 0.6em; flex-wrap: wrap; }
+.wf-sa-disque-tete span, .wf-sa-disque small { color: var(--wf-acier, #A7B0BA); font-size: 0.85em; }
+.wf-sa-jauge { height: 0.7em; margin: 0.5em 0 0.3em; border-radius: 1em; background: rgba(167, 176, 186, 0.15); overflow: hidden; }
+.wf-sa-jauge span { display: block; height: 100%; border-radius: 1em; background: linear-gradient(90deg, #4f7a57, #6fae7b); }
+.wf-sa-presque .wf-sa-jauge span { background: linear-gradient(90deg, #9a6a22, #E0A040); }
+.wf-sa-plein .wf-sa-jauge span { background: linear-gradient(90deg, #5E1219, #C73441); }
+.wf-sa-compteurs { display: grid; grid-template-columns: repeat(auto-fit, minmax(8em, 1fr)); gap: 0.6em; margin-bottom: 1.4em; }
+.wf-sa-compteurs > div { display: flex; flex-direction: column; align-items: center; padding: 0.7em 0.4em; border: 1px solid rgba(167, 176, 186, 0.18); border-radius: 6px; background: #121216; }
+.wf-sa-compteurs .material-icons { color: #C73441; }
+.wf-sa-compteurs b { font-family: var(--wf-titre, serif); font-size: 1.5rem; }
+.wf-sa-compteurs span:last-child { color: var(--wf-acier, #A7B0BA); font-size: 0.85em; }
+.wf-sa-bloc { margin: 0.6em 0; border: 1px solid rgba(167, 176, 186, 0.2); border-radius: 6px; background: #121216; }
+.wf-sa-bloc summary { display: flex; align-items: center; gap: 0.6em; padding: 0.8em 1em; cursor: pointer; font-family: var(--wf-titre, serif); font-size: 1.1rem; list-style: none; }
+.wf-sa-bloc summary::-webkit-details-marker { display: none; }
+.wf-sa-bloc summary .material-icons { color: #C73441; }
+.wf-sa-n { margin-left: auto; min-width: 2em; text-align: center; padding: 0.05em 0.6em; border-radius: 1em; background: #A3232E; color: #F4F1EC; font-family: var(--wf-texte-police, sans-serif); font-size: 0.8rem; }
+.wf-sa-n.wf-sa-zero { background: rgba(95, 191, 110, 0.25); color: #9fd9a9; }
+.wf-sa-bloc > :not(summary) { margin-left: 1em; margin-right: 1em; }
+.wf-sa-bloc[open] { padding-bottom: 0.8em; }
+.wf-sa-liste { list-style: none; margin: 0.4em 1em; padding: 0; max-height: 26em; overflow-y: auto; }
+.wf-sa-liste li { display: flex; align-items: baseline; gap: 0.6em; padding: 0.3em 0.2em; border-bottom: 1px solid rgba(167, 176, 186, 0.08); }
+.wf-sa-liste li .material-icons { font-size: 1.1em; color: var(--wf-acier, #A7B0BA); align-self: center; }
+.wf-sa-liste a { color: inherit; text-decoration: none; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wf-sa-liste a:hover { color: #C73441; }
+.wf-sa-liste b { font-variant-numeric: tabular-nums; }
+.wf-sa-liste small { color: var(--wf-acier, #A7B0BA); max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -19,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v2.14.0';
+    var VERSION = 'v2.15.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -86,6 +86,7 @@
         { cle: 'cycles', href: '#/home?wf=cycles', icone: 'all_inclusive', texte: 'Cycles' },
         { cle: 'avenir', href: '#/home?wf=avenir', icone: 'event', texte: 'À venir' },
         { cle: 'suivi', href: '#/home?wf=suivi', icone: 'insights', texte: 'Mon suivi' },
+        { cle: 'sante', href: '#/home?wf=sante', icone: 'monitor_heart', texte: 'Santé', admin: true },
         { cle: 'favoris', href: '#/home?tab=1', icone: 'favorite', texte: 'Favoris' }
     ];
     function tuiles() {
@@ -97,6 +98,7 @@
         conteneurs.forEach(function (c) {
             TUILES.forEach(function (t) {
                 if (c.querySelector('.wf-tuile-' + t.cle)) return;
+                if (t.admin && !html.classList.contains('wf-admin')) return;
                 var a = document.createElement('a');
                 a.setAttribute('is', 'emby-linkbutton');
                 a.href = t.href;
@@ -112,7 +114,8 @@
         { cle: 'sagas', href: '#/home?wf=sagas', icone: 'theaters', texte: 'Sagas' },
         { cle: 'cycles', href: '#/home?wf=cycles', icone: 'all_inclusive', texte: 'Cycles' },
         { cle: 'avenir', href: '#/home?wf=avenir', icone: 'event', texte: 'À venir' },
-        { cle: 'suivi', href: '#/home?wf=suivi', icone: 'insights', texte: 'Mon suivi' }
+        { cle: 'suivi', href: '#/home?wf=suivi', icone: 'insights', texte: 'Mon suivi' },
+        { cle: 'sante', href: '#/home?wf=sante', icone: 'monitor_heart', texte: 'Santé', admin: true }
     ];
     function liensNav() {
         var modele = document.querySelector('.MuiToolbar-root a.MuiButton-root[href$="/home?tab=1"]');
@@ -120,6 +123,7 @@
         var parent = modele.parentNode;
         var h = location.hash || '';
         LIENS_NAV.forEach(function (l) {
+            if (l.admin && !html.classList.contains('wf-admin')) return;
             var a = parent.querySelector(':scope > .wf-nav-' + l.cle);
             if (!a) {
                 a = modele.cloneNode(true);
@@ -343,6 +347,7 @@
         if (config.suivi !== false) modules.push('suivi');
         if (config.livresAudio !== false) modules.push('audio');
         if (config.repriseLecture !== false) modules.push('reprise');
+        if (config.sante !== false) modules.push('sante');
         modules.forEach(function (nom) {
             var id = 'wf-js-' + nom;
             if (document.getElementById(id)) return;

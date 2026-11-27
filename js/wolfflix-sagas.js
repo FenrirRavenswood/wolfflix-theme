@@ -546,7 +546,7 @@
     function page() {
         var m = /^#\/home\?(?:[^#]*&)?wf=(sagas|cycles)/.exec(location.hash || '');
         var el = document.getElementById('wf-page');
-        if (!m && el && /^(avenir|suivi)$/.test(el.getAttribute('data-type') || '')) return; // pages gérées par wolfflix-avenir.js / wolfflix-suivi.js
+        if (!m && el && /^(avenir|suivi|sante)$/.test(el.getAttribute('data-type') || '')) return; // pages gérées par wolfflix-avenir.js / wolfflix-suivi.js
         if (!m) {
             if (el) el.remove();
             html.classList.remove('wf-page-ouverte');
