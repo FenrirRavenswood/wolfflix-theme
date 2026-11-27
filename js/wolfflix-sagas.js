@@ -213,6 +213,8 @@
             (o.rang ? '<span class="wf-rang">' + o.rang + '</span>' : '') +
             (o.ruban ? '<span class="wf-ruban">' + esc(o.ruban) + '</span>' : '') +
             '</div></a>' +
+            (o.masquer ? '<button type="button" class="wf-masquer-cycle" data-col="' + esc(o.masquer.col) + '" data-prochain="' + esc(o.masquer.prochain) +
+                '" title="Ne plus proposer ce cycle ici" aria-label="Ne plus proposer ce cycle ici"><span class="material-icons close"></span></button>' : '') +
             '<div class="cardText cardTextCentered cardText-first"><bdi>' + esc(o.nom) + '</bdi></div>' +
             (o.sous ? '<div class="cardText cardTextCentered cardText-secondary"><bdi>' + esc(o.sous) + '</bdi></div>' : '') +
             '</div></div>';
@@ -354,7 +356,7 @@
             if (!choix.length) return [];
             return json('Users/' + uid() + '/Items', {
                 Ids: choix.map(function (c) { return c.id; }).join(','),
-                Fields: 'ProductionYear', EnableImageTypes: 'Primary', ImageTypeLimit: 1
+                Fields: 'ProductionYear,PrimaryImageAspectRatio,Overview', EnableImageTypes: 'Primary,Backdrop,Thumb', ImageTypeLimit: 1, EnableUserData: true
             }).then(function (d) {
                 var parId = {};
                 (d.Items || []).forEach(function (i) { parId[i.Id] = i; });
@@ -366,46 +368,157 @@
         });
     }
 
-    /* ---------- Accueil : quatre rangées ---------- */
+    /* ---------- Accueil ----------
+       · Sagas : le film suivant de chaque saga commencée est ajouté DANS « À suivre » de Jellyfin
+         (même carte que les épisodes), avec une barre « Saga : nom · 3/7 ».
+       · Cycles : rangée à part « Cycles : à suivre » (on peut regarder une série seule sans suivre
+         tout le cycle) ; chaque carte peut être masquée, elle revient si tu continues le cycle.
+       · « Sagas / Cycles ajoutés récemment » en bas. */
     var enConstruction = typeof WeakSet === 'function' ? new WeakSet() : null;
+
+    // Cycles masqués de « À suivre » : { idCycle: idDuTitreProposé } (synchronisé entre appareils)
+    var PREF_CYCLES = 'wolfflix-cycles';
+    var cyclesMasques = null;
+    function lireMasques() {
+        if (cyclesMasques) return Promise.resolve(cyclesMasques);
+        var local = {};
+        try { local = JSON.parse(localStorage.getItem('wf-cycles-masques-' + uid()) || '{}'); } catch (e) { local = {}; }
+        return json('DisplayPreferences/' + PREF_CYCLES, { userId: uid(), client: 'wolfflix' }).then(function (d) {
+            var srv = null;
+            try { srv = d && d.CustomPrefs && d.CustomPrefs.masques ? JSON.parse(d.CustomPrefs.masques) : null; } catch (e) { srv = null; }
+            cyclesMasques = srv && (srv._d || 0) >= (local._d || 0) ? srv : local;
+            return cyclesMasques;
+        }).catch(function () { cyclesMasques = local; return local; });
+    }
+    function ecrireMasques() {
+        cyclesMasques._d = Date.now();
+        try { localStorage.setItem('wf-cycles-masques-' + uid(), JSON.stringify(cyclesMasques)); } catch (e) { /* plein */ }
+        api().ajax({
+            type: 'POST', contentType: 'application/json', url: url('DisplayPreferences/' + PREF_CYCLES, { userId: uid(), client: 'wolfflix' }),
+            data: JSON.stringify({ Id: PREF_CYCLES, Client: 'wolfflix', SortBy: 'SortName', SortOrder: 'Ascending', RememberIndexing: false, RememberSorting: false,
+                ScrollDirection: 'Horizontal', ShowBackdrop: false, ShowSidebar: false, PrimaryImageHeight: 250, PrimaryImageWidth: 250,
+                CustomPrefs: { masques: JSON.stringify(cyclesMasques) } })
+        }).catch(function () { /* reste locale */ });
+    }
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest && e.target.closest('.wf-masquer-cycle');
+        if (!b) return;
+        e.preventDefault();
+        e.stopPropagation();
+        lireMasques().then(function (m) {
+            m[b.getAttribute('data-col')] = b.getAttribute('data-prochain');
+            ecrireMasques();
+            var c = b.closest('.card');
+            var sec = c && c.closest('.wf-section');
+            if (c) c.remove();
+            if (sec && !sec.querySelector('.card')) sec.remove();
+            toast('Ce cycle ne sera plus proposé ici. Il reviendra si tu le continues.');
+        });
+    }, true);
+
+    // Barre « Saga : nom · 3/7 » sous les cartes ajoutées à « À suivre »
+    function decorer(ic) {
+        var sagas = ic.__wfSagas || [];
+        sagas.forEach(function (c) {
+            var carteJf = ic.querySelector('.card[data-id="' + c.item.Id + '"]');
+            if (!carteJf || carteJf.querySelector('.wf-saga-barre')) return;
+            var boite = carteJf.querySelector('.cardBox') || carteJf;
+            boite.insertAdjacentHTML('beforeend', '<div class="wf-saga-barre" title="' + esc(c.col.nom) + '"><span class="material-icons movie_filter" aria-hidden="true"></span>' +
+                '<span class="wf-saga-barre-nom">Saga : ' + esc(c.col.nom) + '</span><span class="wf-saga-barre-pos">' + c.position + '/' + c.col.ids.length + '</span></div>');
+        });
+    }
+    // Ajoute les films de sagas dans l'« À suivre » de Jellyfin (renvoie false s'il n'existe pas)
+    function brancherASuivre(conteneur, sagas) {
+        var lien = conteneur.querySelector('a[href*="nextup"]');
+        var sec = lien && lien.closest('.verticalSection');
+        var ic = sec && sec.querySelector('.itemsContainer');
+        if (!ic || typeof ic.fetchData !== 'function' || typeof ic.refreshItems !== 'function') return false;
+        ic.__wfSagas = sagas;
+        if (!ic.__wfBranche) {
+            ic.__wfBranche = true;
+            var origine = ic.fetchData;
+            var premier = true;
+            ic.fetchData = function () {
+                // Recalcul à chaque rafraîchissement (film terminé → le suivant de la saga), sauf le tout premier
+                var sagasFraiches = premier ? Promise.resolve(ic.__wfSagas) : charger().then(aSuivre).then(function (suite) {
+                    ic.__wfSagas = suite.filter(function (c) { return c.col.type === 's'; });
+                    return ic.__wfSagas;
+                }).catch(function () { return ic.__wfSagas; });
+                premier = false;
+                return Promise.all([Promise.resolve(origine.apply(this, arguments)), sagasFraiches]).then(function (res) {
+                    var r = res[0];
+                    var items = (r && r.Items) || r || [];
+                    var ajouts = (ic.__wfSagas || []).map(function (c) { return c.item; }).filter(function (i) {
+                        return !items.some(function (x) { return x.Id === i.Id; });
+                    });
+                    if (!ajouts.length) return r;
+                    var tous = ajouts.concat(items);
+                    return Array.isArray(r) ? tous : Object.assign({}, r, { Items: tous, TotalRecordCount: (r.TotalRecordCount || items.length) + ajouts.length });
+                });
+            };
+            var apres = ic.afterRefresh;
+            ic.afterRefresh = function (res) {
+                if (apres) apres.call(this, res);
+                decorer(ic);
+            };
+        }
+        Promise.resolve(ic.refreshItems()).then(function () { decorer(ic); }).catch(function () { /* rien */ });
+        return true;
+    }
 
     function accueil() {
         if (!html.classList.contains('wf-accueil') || html.classList.contains('wf-sans-sagas')) return;
         var conteneur = Array.prototype.filter.call(document.querySelectorAll('.homeSectionsContainer'), visible)[0];
-        if (!conteneur || conteneur.querySelector('.wf-section') || !enConstruction || enConstruction.has(conteneur)) return;
+        if (!conteneur || conteneur.hasAttribute('data-wf-sagas') || !enConstruction || enConstruction.has(conteneur)) return;
         // Attendre que Jellyfin ait rempli ses propres rangées
         if (!conteneur.querySelector('.card')) return;
         enConstruction.add(conteneur);
 
-        charger().then(function (cols) {
+        Promise.all([charger(), lireMasques()]).then(function (r) {
+            var cols = r[0], masques = r[1];
             return aSuivre(cols).then(function (suite) {
+                if (conteneur.hasAttribute('data-wf-sagas')) return;
+                conteneur.setAttribute('data-wf-sagas', '1');
                 var morceaux = { avant: '', apres: '' };
+                var sagas = suite.filter(function (c) { return c.col.type === 's'; });
+                var cycles = suite.filter(function (c) {
+                    // Masqué tant que le titre proposé est le même ; s'il a changé, tu as continué le cycle : il revient
+                    return c.col.type === 'c' && masques[c.col.id] !== c.item.Id;
+                });
+                if (sagas.length && !brancherASuivre(conteneur, sagas)) {
+                    // Pas de rangée « À suivre » sur cet accueil : rangée à part, comme avant
+                    morceaux.avant += rangee('À suivre — sagas', sagas.map(function (c) {
+                        var pr = presentation(c.item);
+                        return carte({ id: c.item.Id, nom: pr.nom, tag: pr.tag, imgId: pr.imgId, sous: 'Saga : ' + c.col.nom + ' · ' + c.position + '/' + c.col.ids.length });
+                    }), 'suivre-s');
+                }
+                if (cycles.length) {
+                    morceaux.avant += rangee(NOMS.c.aSuivre, cycles.map(function (c) {
+                        var pr = presentation(c.item);
+                        return carte({
+                            id: c.item.Id, nom: pr.nom, tag: pr.tag, imgId: pr.imgId,
+                            sous: 'Cycle : ' + c.col.nom + ' · ' + c.position + '/' + c.col.ids.length,
+                            masquer: { col: c.col.id, prochain: c.item.Id }
+                        });
+                    }), 'suivre-c');
+                }
                 ['s', 'c'].forEach(function (t) {
-                    var s = suite.filter(function (c) { return c.col.type === t; });
-                    if (s.length) {
-                        morceaux.avant += rangee(NOMS[t].aSuivre, s.map(function (c) {
-                            var pr = presentation(c.item);
-                            return carte({
-                                id: c.item.Id, nom: pr.nom, tag: pr.tag, imgId: pr.imgId,
-                                sous: c.col.nom + ' · ' + c.position + '/' + c.col.ids.length
-                            });
-                        }), 'suivre-' + t);
-                    }
-                    var r = cols.filter(function (c) { return c.type === t && c.ids.length; }).slice(0, 20);
-                    if (r.length) {
-                        morceaux.apres += rangee(NOMS[t].recents, r.map(function (c) {
+                    var rec = cols.filter(function (c) { return c.type === t && c.ids.length; }).slice(0, 20);
+                    if (rec.length) {
+                        morceaux.apres += rangee(NOMS[t].recents, rec.map(function (c) {
                             return carte({ id: c.id, nom: c.nom, tag: c.tag, sous: compte(c) });
                         }), 'recents-' + t, '#/home?wf=' + (t === 's' ? 'sagas' : 'cycles'));
                     }
                 });
-                if (conteneur.querySelector('.wf-section')) return;
-                // « Continuer de regarder » (et pas « À suivre », qui a le même marqueur)
-                var section = null;
-                conteneur.querySelectorAll('.itemsContainer[data-monitor*="videoplayback"]').forEach(function (r) {
-                    var sec = r.closest('.verticalSection');
-                    if (!section && sec && !sec.querySelector('a[href*="nextup"]')) section = sec;
-                });
-                var repere = section || conteneur.querySelector('.section0');
+                // Après « À suivre » (ou « Continuer de regarder »)
+                var lienSuivre = conteneur.querySelector('a[href*="nextup"]');
+                var repere = lienSuivre && lienSuivre.closest('.verticalSection');
+                if (!repere) {
+                    conteneur.querySelectorAll('.itemsContainer[data-monitor*="videoplayback"]').forEach(function (x) {
+                        if (!repere) repere = x.closest('.verticalSection');
+                    });
+                }
+                repere = repere || conteneur.querySelector('.section0');
                 if (morceaux.avant) {
                     if (repere) repere.insertAdjacentHTML('afterend', morceaux.avant);
                     else conteneur.insertAdjacentHTML('afterbegin', morceaux.avant);
@@ -457,6 +570,8 @@
             '<div class="wf-page-outils">' +
             '<button type="button" class="wf-btn wf-btn-pri wf-creer"><span class="material-icons add" aria-hidden="true"></span> ' +
             (type === 's' ? 'Ajouter une saga' : 'Ajouter un cycle') + '</button>' +
+            '<button type="button" class="wf-btn wf-btn-sec wf-possibles"><span class="material-icons auto_awesome" aria-hidden="true"></span> ' +
+            (type === 's' ? 'Sagas possibles' : 'Cycles possibles') + '</button>' +
             '<label class="wf-champ"><span class="material-icons search" aria-hidden="true"></span><input type="search" placeholder="Rechercher" aria-label="Rechercher"></label>' +
             '<select class="wf-tri" aria-label="Trier">' +
             '<option value="recent">Ajout récent</option><option value="nom">Nom</option><option value="taille">Nombre de titres</option>' +
@@ -469,13 +584,16 @@
             '<div class="wf-pagination wf-pagination-bas padded-left padded-right"></div>';
         el.querySelector('.wf-tri').value = tri;
         var creerBtn = el.querySelector('.wf-creer');
+        var possiblesBtn = el.querySelector('.wf-possibles');
         creerBtn.hidden = true;
+        possiblesBtn.hidden = true;
         creerBtn.addEventListener('click', function () { creer(type); });
-        // Bouton réservé aux administrateurs
+        possiblesBtn.addEventListener('click', function () { possibles(type); });
+        // Boutons réservés aux administrateurs
         utilisateur().then(function (u) {
-            if (u && u.Policy && u.Policy.IsAdministrator) creerBtn.hidden = false;
-            else creerBtn.remove();
-        }).catch(function () { creerBtn.remove(); });
+            if (u && u.Policy && u.Policy.IsAdministrator) { creerBtn.hidden = false; possiblesBtn.hidden = false; }
+            else { creerBtn.remove(); possiblesBtn.remove(); }
+        }).catch(function () { creerBtn.remove(); possiblesBtn.remove(); });
 
         charger().then(function (cols) {
             if (el.getAttribute('data-type') !== type || !el.isConnected) return;
@@ -530,6 +648,150 @@
         }).catch(function () {
             var g = el.querySelector('.wf-page-grille');
             if (g) g.innerHTML = '<p class="wf-vide">Impossible de charger les collections. Réessaie dans un instant.</p>';
+        });
+    }
+
+    /* ---------- Sagas / cycles possibles (administrateur) ----------
+       L'extension WolfFlix cherche les films reliés (collections TMDB) et les séries d'un même univers
+       (Wikidata), et propose de créer la saga / le cycle, ou de compléter celui qui existe. */
+    function possibles(type) {
+        var fond = document.createElement('div');
+        fond.className = 'wf-editeur-fond';
+        fond.innerHTML = '<div class="wf-editeur wf-possibles-fenetre" role="dialog" aria-modal="true">' +
+            '<header><p class="wf-page-surtitre">Administrateur</p><h2>' + (type === 's' ? 'Sagas possibles' : 'Cycles possibles') + '</h2>' +
+            '<p class="wf-aide">' + (type === 's'
+                ? 'Films de ta bibliothèque reliés entre eux sur TMDB (collections officielles).'
+                : 'Séries (et films) du même univers ou de la même franchise d\'après Wikidata. Le cycle est créé avec les séries entières : tu pourras ensuite le détailler par saisons dans « Modifier l\'ordre ».') +
+            '</p><p class="wf-possibles-etat"></p></header>' +
+            '<div class="wf-possibles-liste">' + loupAttente('Recherche') + '</div>' +
+            '<footer><button type="button" class="wf-btn wf-btn-sec" data-act="relancer"><span class="material-icons refresh" aria-hidden="true"></span> Chercher à nouveau</button>' +
+            '<button type="button" class="wf-btn wf-btn-pri" data-act="fermer">Fermer</button></footer></div>';
+        document.body.appendChild(fond);
+        html.classList.add('wf-modale-ouverte');
+        var liste = fond.querySelector('.wf-possibles-liste');
+        var etatTexte = fond.querySelector('.wf-possibles-etat');
+        var modifie = false;
+        var minuterie = null;
+        var props = [];
+        function fermer() {
+            clearTimeout(minuterie);
+            fond.remove();
+            html.classList.remove('wf-modale-ouverte');
+            if (modifie) {
+                etat.promesse = null;
+                var el = document.getElementById('wf-page');
+                if (el) el.removeAttribute('data-type');
+                page();
+            }
+        }
+        fond.addEventListener('click', function (e) {
+            if (e.target === fond || e.target.closest('[data-act="fermer"]')) { fermer(); return; }
+            if (e.target.closest('[data-act="relancer"]')) {
+                api().ajax({ type: 'POST', url: url('WolfFlix/Suggestions/Calculer') }).catch(function () { /* rien */ });
+                liste.innerHTML = loupAttente('Recherche');
+                setTimeout(actualiser, 1500);
+                return;
+            }
+            var b = e.target.closest('[data-prop]');
+            if (!b) return;
+            var bloc = b.closest('.wf-prop');
+            var p = props[+bloc.getAttribute('data-i')];
+            if (b.getAttribute('data-prop') === 'ignorer') {
+                api().ajax({ type: 'POST', url: url('WolfFlix/Suggestions/Ignorer', { cle: p.Cle }) }).catch(function () { /* rien */ });
+                bloc.remove();
+                return;
+            }
+            var ids = Array.prototype.filter.call(bloc.querySelectorAll('input[type="checkbox"]'), function (c) { return c.checked && !c.disabled; })
+                .map(function (c) { return c.value; });
+            var nom = bloc.querySelector('.wf-prop-nom').value.trim() || p.Nom;
+            if (!ids.length) { toast('Coche au moins un titre', true); return; }
+            bloc.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
+            (p.ExistanteId ? completer(p, ids) : creerDepuis(type, nom, p, ids)).then(function () {
+                modifie = true;
+                bloc.classList.add('wf-prop-faite');
+                bloc.innerHTML = '<p><span class="material-icons check_circle" aria-hidden="true"></span> ' +
+                    esc(p.ExistanteId ? '« ' + p.ExistanteNom + ' » complétée' : (type === 's' ? 'Saga « ' : 'Cycle « ') + nom + ' » créé' + (type === 's' ? 'e' : '')) + '</p>';
+            }).catch(function () {
+                bloc.querySelectorAll('button').forEach(function (x) { x.disabled = false; });
+                toast('Impossible : droits administrateur requis ?', true);
+            });
+        });
+        function actualiser() {
+            clearTimeout(minuterie);
+            json('WolfFlix/Suggestions', { type: type }).then(function (d) {
+                if (!fond.isConnected) return;
+                if (!d.tmdb && type === 's') etatTexte.textContent = 'Clé TMDB manquante dans les réglages de l\'extension WolfFlix.';
+                else if (d.enCours) etatTexte.textContent = 'Recherche en cours' + (d.etape ? ' : ' + d.etape : '') + '… (peut prendre quelques minutes la première fois)';
+                else etatTexte.textContent = d.maj ? 'Dernière recherche : ' + new Date(d.maj).toLocaleString('fr-FR') : '';
+                props = d.propositions || [];
+                if (d.enCours && !props.length) {
+                    liste.innerHTML = loupAttente('Recherche');
+                } else if (!props.length) {
+                    liste.innerHTML = '<p class="wf-vide">Aucune proposition : tout est déjà rangé.</p>';
+                } else {
+                    liste.innerHTML = props.map(function (p, i) {
+                        return '<section class="wf-prop" data-i="' + i + '">' +
+                            '<div class="wf-prop-tete"><input class="wf-prop-nom" type="text" value="' + esc(p.Nom) + '" aria-label="Nom"' + (p.ExistanteId ? ' disabled' : '') + '>' +
+                            '<span class="wf-prop-source">' + esc(p.Source) + '</span></div>' +
+                            (p.ExistanteId ? '<p class="wf-aide">À compléter : <a href="' + esc(lienFiche(p.ExistanteId)) + '">' + esc(p.ExistanteNom) + '</a></p>' : '') +
+                            '<ul>' + p.Titres.map(function (t) {
+                                return '<li><label><input type="checkbox" value="' + esc(t.Id) + '" checked' + (t.Dedans ? ' disabled' : '') + '> ' +
+                                    '<span class="material-icons ' + (t.Type === 'Series' ? 'tv' : 'movie') + '" aria-hidden="true"></span> ' + esc(t.Nom) +
+                                    (t.Annee ? ' <small>(' + t.Annee + ')</small>' : '') + (t.Dedans ? ' <small>— déjà dedans</small>' : '') + '</label></li>';
+                            }).join('') + '</ul>' +
+                            '<div class="wf-prop-actions"><button type="button" class="wf-btn wf-btn-sec" data-prop="ignorer">Ignorer</button>' +
+                            '<button type="button" class="wf-btn wf-btn-pri" data-prop="ok">' +
+                            (p.ExistanteId ? 'Compléter' : (type === 's' ? 'Créer la saga' : 'Créer le cycle')) + '</button></div></section>';
+                    }).join('');
+                }
+                if (d.enCours) minuterie = setTimeout(actualiser, 4000);
+            }).catch(function () {
+                liste.innerHTML = '<p class="wf-vide">Cette fonction demande l\'extension WolfFlix 0.6 ou plus récente.</p>';
+            });
+        }
+        actualiser();
+    }
+    // Nouvelle collection dans l'ordre chronologique proposé
+    function creerDepuis(type, nom, p, ids) {
+        var a = api();
+        var ordre = p.Titres.map(function (t) { return t.Id; }).filter(function (id) { return ids.indexOf(id) !== -1; });
+        return a.ajax({ type: 'POST', url: url('Collections', { Name: nom, Ids: ordre.join(','), IsLocked: false }), dataType: 'json' }).then(function (r) {
+            var id = r && (r.Id || r.id);
+            if (!id) throw new Error('pas d\'identifiant');
+            return a.getItem(uid(), id).then(function (item) {
+                item.ProviderIds = item.ProviderIds || {};
+                item.ProviderIds.WolfFlixType = type;
+                item.ProviderIds.WolfFlix = ordre.join(',');
+                return a.updateItem(item);
+            }).catch(function () { /* l'ordre par date de sortie s'appliquera */ });
+        });
+    }
+    // Collection existante : ajout des titres cochés, insérés à leur place dans l'ordre enregistré
+    function completer(p, ids) {
+        var a = api();
+        return a.ajax({ type: 'POST', url: url('Collections/' + p.ExistanteId + '/Items', { ids: ids.join(',') }) }).then(function () {
+            oublier(p.ExistanteId);
+            return frais(p.ExistanteId);
+        }).then(function (c) {
+            var j = jetons(c);
+            if (!j) return null;   // pas d'ordre perso : l'ordre automatique place les nouveaux titres
+            var ordreRef = p.Titres.map(function (t) { return t.Id; });
+            ids.forEach(function (nouveau) {
+                if (j.indexOf(nouveau) !== -1) return;
+                var k = ordreRef.indexOf(nouveau);
+                var pos = -1;
+                for (var x = k - 1; x >= 0 && pos < 0; x--) pos = j.indexOf(ordreRef[x]);
+                j.splice(pos + 1, 0, nouveau);
+            });
+            var valeur = j.join(',');
+            c.ProviderIds = c.ProviderIds || {};
+            if (c.ProviderIds.WolfFlix || c.ProviderIds.wolfflix || !(c.Tags || []).some(function (t) { return t.indexOf('wfordre:') === 0; })) {
+                c.ProviderIds.WolfFlix = valeur;
+                delete c.ProviderIds.wolfflix;
+            } else {
+                c.Tags = c.Tags.filter(function (t) { return t.indexOf('wfordre:') !== 0; }).concat(['wfordre:' + valeur]);
+            }
+            return a.updateItem(c);
         });
     }
 

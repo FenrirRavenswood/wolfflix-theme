@@ -19,7 +19,7 @@
     if (window.__wolfflixCore) return;
     window.__wolfflixCore = true;
 
-    var VERSION = 'v2.13.2';
+    var VERSION = 'v2.14.0';
     var BASE = 'https://cdn.jsdelivr.net/gh/FenrirRavenswood/wolfflix-theme@' + VERSION + '/';
     var html = document.documentElement;
     var reduitMouvement = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -342,6 +342,7 @@
         if (config.aVenir !== false) modules.push('avenir');
         if (config.suivi !== false) modules.push('suivi');
         if (config.livresAudio !== false) modules.push('audio');
+        if (config.repriseLecture !== false) modules.push('reprise');
         modules.forEach(function (nom) {
             var id = 'wf-js-' + nom;
             if (document.getElementById(id)) return;

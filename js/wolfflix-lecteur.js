@@ -192,18 +192,36 @@
             Object.keys(this.minuteries).forEach(function (id) { self.envoyer(id); });
         }
     };
-    window.addEventListener('pagehide', function () { Position.toutEnvoyer(); });
-    document.addEventListener('visibilitychange', function () { if (document.hidden) Position.toutEnvoyer(); });
+    window.addEventListener('pagehide', function () { viderEtats(); Position.toutEnvoyer(); });
+    document.addEventListener('visibilitychange', function () { if (document.hidden) { viderEtats(); Position.toutEnvoyer(); } });
 
     // Progression visible dans Jellyfin (barres de progression, « Continuer la lecture », « Vu »)
     var dernierEtat = {};
+    var etatsEnAttente = {};   // dernier état pas encore envoyé (limite de 15 s) : envoyé à la fermeture
     function etatJellyfin(id, fraction, ticks, fini, force) {
         var maintenant = Date.now();
         var prec = dernierEtat[id];
-        if (!force && prec && maintenant - prec.t < 15000 && prec.fini === fini) return;
-        dernierEtat[id] = { t: maintenant, fini: fini };
+        // Position jamais nulle une fois le livre ouvert : sinon Jellyfin ne le compte pas « en cours »
         var corps = fini ? { Played: true, PlaybackPositionTicks: 0, PlayedPercentage: 0, LastPlayedDate: new Date().toISOString() }
-            : { PlayedPercentage: borne(fraction * 100, 0, 100), PlaybackPositionTicks: Math.max(0, Math.round(ticks)), LastPlayedDate: new Date().toISOString() };
+            : { Played: false, PlayedPercentage: borne(fraction * 100, 0.5, 99.5), PlaybackPositionTicks: Math.max(10000, Math.round(ticks)), LastPlayedDate: new Date().toISOString() };
+        if (!force && prec && maintenant - prec.t < 15000 && prec.fini === fini) {
+            etatsEnAttente[id] = corps;
+            return;
+        }
+        delete etatsEnAttente[id];
+        dernierEtat[id] = { t: maintenant, fini: fini };
+        envoyerEtat(id, corps);
+    }
+    function viderEtats() {
+        Object.keys(etatsEnAttente).forEach(function (id) {
+            envoyerEtat(id, etatsEnAttente[id]);
+            dernierEtat[id] = { t: Date.now(), fini: !!etatsEnAttente[id].Played };
+            delete etatsEnAttente[id];
+        });
+    }
+    function envoyerEtat(id, corps) {
+        if (!api()) return;
+        window.dispatchEvent(new CustomEvent('wf-lecture-maj', { detail: { id: id } }));
         api().ajax({
             type: 'POST', contentType: 'application/json', data: JSON.stringify(corps),
             url: url('UserItems/' + id + '/UserData', { userId: uid() })
@@ -418,6 +436,7 @@
             if (etat.ferme) return;
             etat.ferme = true;
             try { if (etat.avantFermeture) etat.avantFermeture(); } catch (e) { /* rien */ }
+            viderEtats();
             Position.toutEnvoyer();
             document.removeEventListener('keydown', clavier, true);
             window.removeEventListener('popstate', surPopstate);
